@@ -18,6 +18,8 @@ export type SessionUser = {
 export type Session = {
   authenticated: true
   user: SessionUser
+  // Token CSRF vigente; `api-client` lo guarda para los requests que mutan.
+  csrfToken: string
 }
 
 export function displayName(user: SessionUser): string {

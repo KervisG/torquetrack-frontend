@@ -22,6 +22,8 @@ export const customerUser: SessionUser = {
   permissions: [],
 }
 
+export const testCsrfToken = 'csrf-test-token'
+
 export const dashboardCounts = {
   orders: 3,
   activeQuotes: 1,
@@ -33,13 +35,13 @@ export const dashboardCounts = {
 
 export function unauthorizedSession() {
   return http.get('/api/session/', () =>
-    HttpResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    HttpResponse.json({ error: 'Unauthorized', csrfToken: testCsrfToken }, { status: 401 }),
   )
 }
 
 export function authenticatedSession(user: SessionUser = sessionUser) {
   return http.get('/api/session/', () =>
-    HttpResponse.json({ authenticated: true, user }),
+    HttpResponse.json({ authenticated: true, user, csrfToken: testCsrfToken }),
   )
 }
 
