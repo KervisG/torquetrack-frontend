@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 
@@ -8,6 +8,9 @@ import { FormField } from '@/components/form-field'
 import { StorefrontButton } from '@/components/storefront-button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { useSession } from '@/features/account/auth/hooks/use-session'
+import { getAccount } from '@/features/account/portal/api'
+import { accountKeys } from '@/features/account/portal/query-keys'
 import { listProducts } from '@/features/storefront/catalog/api'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { decodeVin } from '@/features/storefront/vin/api'
@@ -35,6 +38,18 @@ const CUSTOMER_FIELDS = [
   ['country', 'Country'],
 ] as const
 
+const PREFILL_FIELDS = [
+  'name',
+  'company',
+  'phone',
+  'address1',
+  'address2',
+  'city',
+  'state',
+  'zip',
+  'country',
+] as const
+
 export function CheckoutPage() {
   const items = useCartStore((state) => state.items)
   const cartId = useCartStore((state) => state.cartId)
@@ -58,6 +73,32 @@ export function CheckoutPage() {
       country: 'US',
     },
   })
+  const session = useSession()
+  // Solo un cliente (sin Role) tiene perfil: el backend fija el email de la
+  // cuenta en el pedido, así que se muestra bloqueado. El staff sigue el flujo
+  // de invitado.
+  const accountEmail =
+    session.data && !session.data.user.isStaff ? session.data.user.email : null
+  const account = useQuery({
+    queryKey: accountKeys.profile(),
+    queryFn: getAccount,
+    enabled: Boolean(accountEmail),
+    retry: false,
+  })
+
+  useEffect(() => {
+    if (accountEmail) form.setValue('email', accountEmail)
+  }, [accountEmail, form])
+
+  useEffect(() => {
+    const profile = account.data
+    if (!profile) return
+    // No se pisa lo que el cliente ya escribió antes de que llegara el perfil.
+    for (const field of PREFILL_FIELDS) {
+      if (profile[field] && !form.getValues(field)) form.setValue(field, profile[field])
+    }
+  }, [account.data, form])
+
   const [vin, setVin] = useState('')
   const [vehicle, setVehicle] = useState<VinVehicle | null>(null)
   const [fitment, setFitment] = useState<FitmentResponse | null>(null)
@@ -213,6 +254,14 @@ export function CheckoutPage() {
         Review your parts, verify the VIN, confirm shipping and tax, then continue to the payment
         provider&apos;s secure page.
       </p>
+      {rows.length ? (
+        <p className="mt-2 text-sm text-muted-foreground">
+          Need fitment confirmed or a fleet price first?{' '}
+          <Link to="/quote" className="font-medium text-foreground underline underline-offset-4">
+            Request a quote instead
+          </Link>
+        </p>
+      ) : null}
 
       <form
         className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
@@ -327,6 +376,7 @@ export function CheckoutPage() {
                     id={field}
                     label={label}
                     placeholder={label}
+                    readOnly={field === 'email' && Boolean(accountEmail)}
                     {...form.register(field)}
                   />
                 ))}

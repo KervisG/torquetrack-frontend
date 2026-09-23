@@ -14,6 +14,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { useSession } from '@/features/account/auth/hooks/use-session'
+import { useSignOut } from '@/features/account/auth/hooks/use-sign-out'
 import { listProducts } from '@/features/storefront/catalog/api'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { formatMoney } from '@/lib/money'
@@ -56,9 +58,7 @@ export function StorefrontShell() {
             <Link to="/checkout" className="text-muted-foreground hover:text-foreground">
               Checkout
             </Link>
-            <Link to="/admin/login" className="text-muted-foreground hover:text-foreground">
-              Login
-            </Link>
+            <AccountNav />
             <StorefrontButton type="button" tone="outline" onClick={() => setDrawerOpen(true)}>
               <ShoppingCart className="size-4" />
               Cart
@@ -135,9 +135,59 @@ export function StorefrontShell() {
             <StorefrontButton asChild className="w-full" onClick={() => setDrawerOpen(false)}>
               <Link to="/checkout">Continue to Checkout</Link>
             </StorefrontButton>
+            {rows.length ? (
+              <StorefrontButton
+                asChild
+                tone="outline"
+                className="w-full"
+                onClick={() => setDrawerOpen(false)}
+              >
+                <Link to="/quote">Request a Quote</Link>
+              </StorefrontButton>
+            ) : null}
           </SheetFooter>
         </SheetContent>
       </Sheet>
     </div>
+  )
+}
+
+const navLink = 'text-muted-foreground hover:text-foreground'
+
+// Con sesión se ofrece el portal (y el panel si la cuenta tiene Role); sin
+// sesión, un solo acceso para clientes y staff.
+function AccountNav() {
+  const session = useSession()
+  const signOut = useSignOut()
+  const user = session.data?.user
+
+  if (!user) {
+    return (
+      <Link to="/login" className={navLink}>
+        Sign in
+      </Link>
+    )
+  }
+
+  return (
+    <>
+      <Link to="/account" className={navLink}>
+        My account
+      </Link>
+      {user.isStaff ? (
+        <Link to="/admin" className={navLink}>
+          Admin
+        </Link>
+      ) : null}
+      <StorefrontButton
+        type="button"
+        tone="link"
+        className="h-auto p-0 text-muted-foreground"
+        onClick={() => signOut.mutate()}
+        disabled={signOut.isPending}
+      >
+        Sign out
+      </StorefrontButton>
+    </>
   )
 }

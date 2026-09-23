@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ApiError } from '@/lib/api-client'
-import { useAdminSession } from '@/features/admin/auth/hooks/use-admin-session'
+import { useSession } from '@/features/account/auth/hooks/use-session'
 import { hasAdminPermission } from '@/features/admin/auth/types'
 
 import { getDashboard } from '../api'
@@ -14,7 +15,7 @@ const money = new Intl.NumberFormat('en-US', {
 })
 
 export function DashboardPage() {
-  const session = useAdminSession()
+  const session = useSession()
   const user = session.data?.user
   const allowed = user ? hasAdminPermission(user, 'dashboard.view') : false
   const dashboard = useQuery({
@@ -47,14 +48,29 @@ export function DashboardPage() {
   }
 
   const counts = dashboard.data.counts
+  // Un conteo enlaza a su pantalla solo si el rol puede abrirla.
+  const canOrders = user ? hasAdminPermission(user, 'orders.view') : false
+  const canQuotes = user ? hasAdminPermission(user, 'quotes.view') : false
 
   return (
     <section>
       <h1 className="text-2xl font-semibold">Dashboard</h1>
       <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Metric label="Orders" value={String(counts.orders)} />
-        <Metric label="Active quotes" value={String(counts.activeQuotes)} />
-        <Metric label="Building quotes" value={String(counts.buildingQuotes)} />
+        <Metric
+          label="Orders"
+          value={String(counts.orders)}
+          to={canOrders ? '/admin/orders' : undefined}
+        />
+        <Metric
+          label="Active quotes"
+          value={String(counts.activeQuotes)}
+          to={canQuotes ? '/admin/quotes?status=ACTIVE' : undefined}
+        />
+        <Metric
+          label="Building quotes"
+          value={String(counts.buildingQuotes)}
+          to={canQuotes ? '/admin/quotes?status=BUILDING' : undefined}
+        />
         <Metric label="Active carts" value={String(counts.activeCarts)} />
         <Metric label="Abandoned carts" value={String(counts.abandonedCarts)} />
         <Metric label="Sales today" value={money.format(counts.salesToday)} />
@@ -63,17 +79,17 @@ export function DashboardPage() {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <li>
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-semibold">{value}</p>
-        </CardContent>
-      </Card>
-    </li>
+function Metric({ label, value, to }: { label: string; value: string; to?: string }) {
+  const card = (
+    <Card className={to ? 'transition-colors hover:border-foreground/40' : undefined}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-2xl font-semibold">{value}</p>
+      </CardContent>
+    </Card>
   )
+
+  return <li>{to ? <Link to={to} className="block">{card}</Link> : card}</li>
 }

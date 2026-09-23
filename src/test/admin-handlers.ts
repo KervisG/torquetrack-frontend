@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 
-import type { SessionUser } from '@/features/admin/auth/types'
+import type { SessionUser } from '@/features/account/auth/types'
 
 export const sessionUser: SessionUser = {
   id: 'usr_1',
@@ -10,6 +10,7 @@ export const sessionUser: SessionUser = {
   isStaff: true,
   role: { slug: 'admin', name: 'Admin', fullAccess: true },
   permissions: ['dashboard.view', 'users.manage'],
+  emailVerified: true,
 }
 
 export const customerUser: SessionUser = {
@@ -20,6 +21,7 @@ export const customerUser: SessionUser = {
   isStaff: false,
   role: null,
   permissions: [],
+  emailVerified: true,
 }
 
 export const testCsrfToken = 'csrf-test-token'
