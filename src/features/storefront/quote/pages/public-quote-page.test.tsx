@@ -25,6 +25,7 @@ const publicQuote = {
     },
   ],
   totals: { subtotal: 429, core: 150, shipping: 0, tax: 0, total: 579 },
+  payable: true,
 }
 
 function detailsOk(body: typeof publicQuote = publicQuote) {
@@ -94,11 +95,43 @@ describe('PublicQuotePage', () => {
     expect(checkoutToken).toBe('tok123')
   })
 
-  it('hides checkout once the quote is converted', async () => {
-    server.use(productsOk(), detailsOk({ ...publicQuote, status: 'CONVERTED' }))
+  it.each([
+    ['BUILDING', false],
+    ['LOST', false],
+    ['CONVERTED', false],
+  ])('hides checkout when the backend says a %s quote is not payable', async (status, payable) => {
+    server.use(productsOk(), detailsOk({ ...publicQuote, status, payable }))
     renderApp('/quote/tok123')
 
     expect(await screen.findByRole('heading', { name: 'Quote Q10001' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Checkout securely' })).not.toBeInTheDocument()
+  })
+
+  it('offers checkout again for a converted quote whose order is still unpaid', async () => {
+    // El backend decide con la misma regla que el checkout: una cotización
+    // convertida sin pedido pagado se puede reintentar.
+    server.use(productsOk(), detailsOk({ ...publicQuote, status: 'CONVERTED', payable: true }))
+    renderApp('/quote/tok123')
+
+    expect(await screen.findByRole('button', { name: 'Checkout securely' })).toBeInTheDocument()
+  })
+
+  it.each([
+    [409, 'This quote has already been paid'],
+    [410, 'This quote has expired'],
+  ])('shows the backend message when checkout answers %i', async (status, error) => {
+    server.use(
+      productsOk(),
+      detailsOk(),
+      http.post('/api/quote/public/:token/checkout/', () =>
+        HttpResponse.json({ error }, { status }),
+      ),
+    )
+    renderApp('/quote/tok123')
+
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Checkout securely' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(error)
   })
 })

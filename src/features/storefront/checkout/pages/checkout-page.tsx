@@ -22,7 +22,13 @@ import {
 } from '@/lib/validators/checkout-customer'
 import { useCartStore } from '@/stores/cart-store'
 
-import { checkFitment, createCheckout, estimateTax, getShippingRates } from '../api'
+import {
+  checkFitment,
+  createCheckout,
+  estimateTax,
+  getShippingRates,
+  toShippingSelection,
+} from '../api'
 import type { FitmentResponse, ShippingRate, TaxEstimate, VinVehicle } from '../types'
 
 const CUSTOMER_FIELDS = [
@@ -103,7 +109,12 @@ export function CheckoutPage() {
   const [vehicle, setVehicle] = useState<VinVehicle | null>(null)
   const [fitment, setFitment] = useState<FitmentResponse | null>(null)
   const [tax, setTax] = useState<TaxEstimate | null>(null)
-  const [rates, setRates] = useState<Array<{ label: string; rate: ShippingRate | null }>>([])
+  // Las opciones valen solo para los ítems con los que se cotizaron: si el
+  // carrito cambia se ocultan y hay que volver a pedir tarifas.
+  const [quoted, setQuoted] = useState<{
+    itemsKey: string
+    options: Array<{ label: string; rate: ShippingRate | null }>
+  } | null>(null)
   const [message, setMessage] = useState('')
   const [paying, setPaying] = useState(false)
 
@@ -119,22 +130,9 @@ export function CheckoutPage() {
   const taxAmount = Number(tax?.tax || 0)
   const invalidPrice = rows.some((row) => !Number.isFinite(Number(row.price)) || Number(row.price) <= 0)
   const fitmentApproved = Boolean(fitment?.compatible)
-
-  function parcel() {
-    const weight = rows.reduce(
-      (sum, row) => sum + (Number(row.shippingWeight) || 1) * 16 * row.qty,
-      0,
-    )
-    return {
-      weight: Math.max(weight, 16),
-      length: Math.max(...rows.map((row) => Number(row.packageLength || row.lengthIn) || 12), 12),
-      width: Math.max(...rows.map((row) => Number(row.packageWidth || row.widthIn) || 10), 10),
-      height: Math.max(
-        rows.reduce((sum, row) => sum + (Number(row.packageHeight || row.heightIn) || 6) * row.qty, 0),
-        6,
-      ),
-    }
-  }
+  const cartItems = rows.map((row) => ({ id: row.id, qty: row.qty }))
+  const itemsKey = JSON.stringify(cartItems)
+  const rates = quoted?.itemsKey === itemsKey ? quoted.options : []
 
   async function onVerifyVin() {
     setMessage('')
@@ -173,17 +171,20 @@ export function CheckoutPage() {
           zip: values.zip,
           country: values.country || 'US',
         },
-        parcel: parcel(),
+        items: cartItems,
       })
       if (!response.configured) {
         setMessage(response.message || 'Shipping provider is not configured')
         return
       }
-      setRates([
-        { label: 'Ground', rate: response.ground ?? null },
-        { label: '2nd Day', rate: response.secondDay ?? null },
-        { label: 'Overnight', rate: response.overnight ?? null },
-      ])
+      setQuoted({
+        itemsKey,
+        options: [
+          { label: 'Ground', rate: response.ground ?? null },
+          { label: '2nd Day', rate: response.secondDay ?? null },
+          { label: 'Overnight', rate: response.overnight ?? null },
+        ],
+      })
       setMessage('Choose one shipping method to continue.')
     } catch (error) {
       setMessage(error instanceof ApiError ? error.message : 'Could not get shipping rates')
@@ -221,14 +222,21 @@ export function CheckoutPage() {
       setMessage('Verify VIN, fitment and shipping before payment.')
       return
     }
+    const selection = toShippingSelection(shipping)
+    if (!selection) {
+      // Tarifa guardada en una visita anterior, sin shipment que verificar.
+      setShipping(null)
+      setMessage('Get shipping rates again before payment.')
+      return
+    }
     setPaying(true)
     try {
       const taxed = await onTax()
       if (!taxed) throw new Error('Tax must be calculated before payment.')
       const result = await createCheckout({
-        items: rows.map((row) => ({ id: row.id, qty: row.qty })),
+        items: cartItems,
         cartId,
-        shipping,
+        shipping: selection,
         vehicle,
         customer: {
           ...values,

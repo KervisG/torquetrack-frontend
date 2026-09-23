@@ -14,10 +14,6 @@ import { checkoutPublicQuote, getPublicQuote } from '../api'
 import { publicQuoteKeys } from '../query-keys'
 import type { PublicQuote } from '../types'
 
-// Estados en los que pagar ya no corresponde: una cotización convertida tiene
-// su pedido y una perdida quedó cerrada por ventas.
-const CLOSED_STATUSES = new Set(['CONVERTED', 'LOST', 'EXPIRED'])
-
 export function PublicQuotePage() {
   const { token = '' } = useParams()
   const quote = useQuery({
@@ -143,7 +139,8 @@ function QuoteView({ quote, token }: { quote: PublicQuote; token: string }) {
         </CardContent>
       </Card>
 
-      {CLOSED_STATUSES.has(quote.status) ? null : (
+      {/* El backend decide si se puede pagar; el SPA no repite la regla. */}
+      {!quote.payable ? null : (
         <div className="space-y-3">
           <StorefrontButton
             type="button"

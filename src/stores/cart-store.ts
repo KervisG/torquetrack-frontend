@@ -33,18 +33,22 @@ export const useCartStore = create<CartState>()(
       items: [],
       shipping: null,
       drawerOpen: false,
+      // La tarifa elegida se cotizó para estos ítems exactos y el backend la
+      // rechaza si el carrito cambia, así que todo cambio la descarta.
       add: (id) => {
-        const items = [...get().items]
+        const items = get().items.map((item) => ({ ...item }))
         const found = items.find((item) => item.id === id)
         if (found) found.qty += 1
         else items.push({ id, qty: 1 })
-        set({ items })
+        set({ items, shipping: null })
       },
       setQty: (id, qty) => {
+        const next = Math.max(1, qty)
+        const current = get().items.find((item) => item.id === id)
+        if (!current || current.qty === next) return
         set({
-          items: get().items.map((item) =>
-            item.id === id ? { ...item, qty: Math.max(1, qty) } : item,
-          ),
+          items: get().items.map((item) => (item.id === id ? { ...item, qty: next } : item)),
+          shipping: null,
         })
       },
       remove: (id) => {

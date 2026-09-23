@@ -2,6 +2,13 @@ import type { ShippingRate, VinVehicle } from '@/features/storefront/catalog/typ
 
 export type { ShippingRate, VinVehicle }
 
+// Lo único que el checkout manda del envío: el backend busca el monto que
+// cotizó para ese shipment y esa tarifa.
+export type ShippingSelection = {
+  shipmentId: string
+  rateId: string
+}
+
 export type ShippingRatesResponse = {
   configured: boolean
   message?: string

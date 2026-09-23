@@ -20,4 +20,7 @@ export type PublicQuote = {
   vehicle: { year?: string | number; make?: string; model?: string; engine?: string; vin?: string }
   items: Array<LineItem & { lineTotal: number }>
   totals: DocumentTotals
+  // Si el checkout abriría un cobro. Lo calcula el backend con la misma regla
+  // que `POST .../checkout/` (estado, vencimiento y pedido ya pagado).
+  payable: boolean
 }

@@ -40,6 +40,9 @@ export type VinVehicle = {
 
 export type ShippingRate = {
   id?: string
+  // Shipment de EasyPost que cotizó la tarifa; el checkout lo necesita para
+  // que el backend verifique el monto.
+  shipmentId?: string
   carrier?: string
   service?: string
   rate: number
