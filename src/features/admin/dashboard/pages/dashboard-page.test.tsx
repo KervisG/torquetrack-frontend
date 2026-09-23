@@ -30,10 +30,14 @@ describe('DashboardPage', () => {
 
   it('hides counts when the role cannot view the dashboard', async () => {
     server.use(
-      http.get('/api/admin/session/', () =>
+      http.get('/api/session/', () =>
         HttpResponse.json({
           authenticated: true,
-          user: { ...sessionUser, permissions: ['products.view'] },
+          user: {
+            ...sessionUser,
+            role: { slug: 'parts', name: 'Parts', fullAccess: false },
+            permissions: ['products.view'],
+          },
         }),
       ),
     )
@@ -46,7 +50,7 @@ describe('DashboardPage', () => {
 
   it('sends an anonymous visitor to login', async () => {
     server.use(
-      http.get('/api/admin/session/', () =>
+      http.get('/api/session/', () =>
         HttpResponse.json({ error: 'Unauthorized' }, { status: 401 }),
       ),
     )

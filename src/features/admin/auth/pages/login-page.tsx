@@ -11,7 +11,7 @@ import {
   type AdminLoginValues,
 } from '@/lib/validators/admin-login'
 
-import { loginAdmin } from '../api'
+import { login as loginRequest } from '../api'
 import { AuthCard } from '../components/auth-card'
 import { adminSessionKeys } from '../query-keys'
 
@@ -23,7 +23,7 @@ export function LoginPage() {
     defaultValues: { email: '', password: '' },
   })
   const login = useMutation({
-    mutationFn: loginAdmin,
+    mutationFn: loginRequest,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: adminSessionKeys.all })
       navigate('/admin', { replace: true })

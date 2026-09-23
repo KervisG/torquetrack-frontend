@@ -5,12 +5,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api-client'
 
-import { logoutAdmin } from '../api'
+import { logout as logoutRequest } from '../api'
 import { adminSessionKeys } from '../query-keys'
-import type { AdminSessionUser } from '../types'
+import { displayName, type SessionUser } from '../types'
 
 type AdminShellProps = {
-  user: AdminSessionUser
+  user: SessionUser
   children: ReactNode
 }
 
@@ -18,7 +18,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const logout = useMutation({
-    mutationFn: logoutAdmin,
+    mutationFn: logoutRequest,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: adminSessionKeys.all })
       navigate('/admin/login', { replace: true })
@@ -33,7 +33,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
             <Link to="/admin" className="font-semibold">
               TorqueTrack Admin
             </Link>
-            <p className="text-sm text-muted-foreground">{user.name || user.email}</p>
+            <p className="text-sm text-muted-foreground">{displayName(user)}</p>
           </div>
           <Button
             type="button"

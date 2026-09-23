@@ -1,32 +1,30 @@
-export type AdminSessionUser = {
+export type SessionRole = {
+  slug: string
+  name: string
+  fullAccess: boolean
+}
+
+// Una sola cuenta para clientes y staff: el acceso al panel lo da el Role.
+export type SessionUser = {
   id: string
   email: string
-  username: string
   firstName: string
   lastName: string
-  name: string
-  role: string
+  isStaff: boolean
+  role: SessionRole | null
   permissions: string[]
 }
 
-export type AdminSession = {
+export type Session = {
   authenticated: true
-  user: AdminSessionUser
+  user: SessionUser
 }
 
-export type AdminLoginResponse = {
-  ok: true
-  user: {
-    id: string
-    email: string
-    username: string
-    role: string
-  }
+export function displayName(user: SessionUser): string {
+  return [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email
 }
 
-export function hasAdminPermission(
-  user: AdminSessionUser,
-  permission: string,
-): boolean {
-  return user.permissions.includes('*') || user.permissions.includes(permission)
+export function hasAdminPermission(user: SessionUser, permission: string): boolean {
+  if (!user.isStaff) return false
+  return Boolean(user.role?.fullAccess) || user.permissions.includes(permission)
 }

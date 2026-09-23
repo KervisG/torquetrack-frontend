@@ -1,14 +1,25 @@
 import { http, HttpResponse } from 'msw'
 
-export const sessionUser = {
+import type { SessionUser } from '@/features/admin/auth/types'
+
+export const sessionUser: SessionUser = {
   id: 'usr_1',
   email: 'ada@example.com',
-  username: 'ada@example.com',
   firstName: 'Ada',
   lastName: 'Diesel',
-  name: 'Ada Diesel',
-  role: 'admin',
-  permissions: ['*'],
+  isStaff: true,
+  role: { slug: 'admin', name: 'Admin', fullAccess: true },
+  permissions: ['dashboard.view', 'users.manage'],
+}
+
+export const customerUser: SessionUser = {
+  id: 'usr_2',
+  email: 'pat@example.com',
+  firstName: 'Pat',
+  lastName: 'Fleet',
+  isStaff: false,
+  role: null,
+  permissions: [],
 }
 
 export const dashboardCounts = {
@@ -21,14 +32,14 @@ export const dashboardCounts = {
 }
 
 export function unauthorizedSession() {
-  return http.get('/api/admin/session/', () =>
+  return http.get('/api/session/', () =>
     HttpResponse.json({ error: 'Unauthorized' }, { status: 401 }),
   )
 }
 
-export function authenticatedSession() {
-  return http.get('/api/admin/session/', () =>
-    HttpResponse.json({ authenticated: true, user: sessionUser }),
+export function authenticatedSession(user: SessionUser = sessionUser) {
+  return http.get('/api/session/', () =>
+    HttpResponse.json({ authenticated: true, user }),
   )
 }
 

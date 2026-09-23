@@ -18,6 +18,11 @@ export function AdminAuthGuard() {
     return <Navigate to="/admin/login" replace />
   }
 
+  // Una cuenta sin Role es un cliente: tiene sesión pero no panel.
+  if (!session.data.user.isStaff) {
+    return <Navigate to="/" replace />
+  }
+
   return (
     <AdminShell user={session.data.user}>
       <Outlet />

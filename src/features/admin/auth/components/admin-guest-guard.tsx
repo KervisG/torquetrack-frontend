@@ -5,7 +5,9 @@ import { useAdminSession } from '../hooks/use-admin-session'
 export function AdminGuestGuard() {
   const session = useAdminSession()
 
-  if (session.data?.authenticated) {
+  // Solo el staff salta el login; un cliente con sesión puede entrar con
+  // otra cuenta.
+  if (session.data?.user.isStaff) {
     return <Navigate to="/admin" replace />
   }
 

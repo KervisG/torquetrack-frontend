@@ -1,19 +1,19 @@
 import { apiRequest } from '@/lib/api-client'
 import type { AdminLoginValues } from '@/lib/validators/admin-login'
 
-import type { AdminLoginResponse, AdminSession } from './types'
+import type { Session } from './types'
 
-export function getAdminSession(): Promise<AdminSession> {
-  return apiRequest<AdminSession>('/admin/session')
+export function getSession(): Promise<Session> {
+  return apiRequest<Session>('/session')
 }
 
-export function loginAdmin(values: AdminLoginValues): Promise<AdminLoginResponse> {
-  return apiRequest<AdminLoginResponse>('/admin/login', {
+export function login(values: AdminLoginValues): Promise<Session> {
+  return apiRequest<Session>('/login', {
     method: 'POST',
     body: JSON.stringify(values),
   })
 }
 
-export function logoutAdmin(): Promise<{ ok: true }> {
-  return apiRequest<{ ok: true }>('/admin/logout', { method: 'POST' })
+export function logout(): Promise<{ ok: true }> {
+  return apiRequest<{ ok: true }>('/logout', { method: 'POST' })
 }

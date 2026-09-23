@@ -8,22 +8,35 @@ export class ApiError extends Error {
   }
 }
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE'])
+
 function withTrailingSlash(path: string): string {
   const [pathname, query] = path.split('?')
   const normalized = pathname.endsWith('/') ? pathname : `${pathname}/`
   return query ? `${normalized}?${query}` : normalized
 }
 
+// Django entrega el token en la cookie `csrftoken` (la emite `GET /api/session/`)
+// y lo exige en `X-CSRFToken` en todo request autenticado que muta.
+function readCsrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  // La sesión es la cookie `tt_admin` / `tt_customer`; sin credentials el
-  // backend responde 401 en cada request. Django no redirige un POST sin
-  // slash final sin perder el body.
+  const method = (init?.method ?? 'GET').toUpperCase()
+  const csrfToken = SAFE_METHODS.has(method) ? null : readCsrfToken()
+
+  // La sesión es la cookie `tt_session`; sin credentials el backend responde
+  // 401 en cada request. Django no redirige un POST sin slash final sin
+  // perder el body.
   const response = await fetch(`/api${withTrailingSlash(path)}`, {
     ...init,
     credentials: 'include',
     signal: init?.signal ?? AbortSignal.timeout(10_000),
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfToken ? { 'X-CSRFToken': csrfToken } : {}),
       ...init?.headers,
     },
   })
