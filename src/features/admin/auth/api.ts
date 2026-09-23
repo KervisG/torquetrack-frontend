@@ -1,12 +1,7 @@
 import { apiRequest } from '@/lib/api-client'
 import type { AdminLoginValues } from '@/lib/validators/admin-login'
-import type { AdminRegisterValues } from '@/lib/validators/admin-register'
 
-import type {
-  AdminLoginResponse,
-  AdminRegisterResponse,
-  AdminSession,
-} from './types'
+import type { AdminLoginResponse, AdminSession } from './types'
 
 export function getAdminSession(): Promise<AdminSession> {
   return apiRequest<AdminSession>('/admin/session')
@@ -14,15 +9,6 @@ export function getAdminSession(): Promise<AdminSession> {
 
 export function loginAdmin(values: AdminLoginValues): Promise<AdminLoginResponse> {
   return apiRequest<AdminLoginResponse>('/admin/login', {
-    method: 'POST',
-    body: JSON.stringify(values),
-  })
-}
-
-export function registerAdmin(
-  values: AdminRegisterValues,
-): Promise<AdminRegisterResponse> {
-  return apiRequest<AdminRegisterResponse>('/register', {
     method: 'POST',
     body: JSON.stringify(values),
   })

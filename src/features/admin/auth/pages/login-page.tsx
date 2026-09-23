@@ -59,13 +59,7 @@ export function LoginPage() {
           {login.isPending ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
-      <p className="mt-6 text-sm text-muted-foreground">
-        Need an account?{' '}
-        <Link to="/admin/register" className="font-medium text-foreground underline">
-          Create account
-        </Link>
-      </p>
-      <p className="mt-3 text-sm">
+      <p className="mt-6 text-sm">
         <Link to="/" className="text-muted-foreground underline">
           Back to store
         </Link>

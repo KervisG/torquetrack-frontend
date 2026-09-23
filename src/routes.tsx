@@ -2,7 +2,6 @@ import { StorefrontShell } from '@/components/storefront-shell'
 import { AdminAuthGuard } from '@/features/admin/auth/components/admin-auth-guard'
 import { AdminGuestGuard } from '@/features/admin/auth/components/admin-guest-guard'
 import { LoginPage } from '@/features/admin/auth/pages/login-page'
-import { RegisterPage } from '@/features/admin/auth/pages/register-page'
 import { DashboardPage } from '@/features/admin/dashboard/pages/dashboard-page'
 import { CatalogPage } from '@/features/storefront/catalog/pages/catalog-page'
 import { CheckoutPage } from '@/features/storefront/checkout/pages/checkout-page'
@@ -23,7 +22,6 @@ export const appRoutes = [
     element: <AdminGuestGuard />,
     children: [
       { path: '/admin/login', element: <LoginPage /> },
-      { path: '/admin/register', element: <RegisterPage /> },
     ],
   },
   {

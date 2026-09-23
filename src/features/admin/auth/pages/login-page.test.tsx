@@ -78,4 +78,12 @@ describe('LoginPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
   })
+
+  it('does not offer public self-registration', async () => {
+    server.use(unauthorizedSession())
+    renderApp('/admin/login')
+
+    expect(await screen.findByRole('heading', { name: 'Login' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /create account/i })).not.toBeInTheDocument()
+  })
 })

@@ -24,14 +24,6 @@ export type AdminLoginResponse = {
   }
 }
 
-export type AdminRegisterResponse = {
-  ok: true
-  user: AdminSessionUser & {
-    roleSlug: string
-    active: boolean
-  }
-}
-
 export function hasAdminPermission(
   user: AdminSessionUser,
   permission: string,
