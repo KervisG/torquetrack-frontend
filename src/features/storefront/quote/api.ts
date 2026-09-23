@@ -7,7 +7,6 @@ import type { PublicQuote, QuoteRequestResponse } from './types'
 export function requestQuote(payload: {
   customer: { name: string; email: string; phone: string }
   items: Array<{ productId: string; quantity: number }>
-  cartId: string
 }): Promise<QuoteRequestResponse> {
   return apiRequest<QuoteRequestResponse>('/quote/request', {
     method: 'POST',

@@ -6,8 +6,9 @@ import type { Product, ShippingRate } from '@/features/storefront/catalog/types'
 
 export type CartLine = { id: string; qty: number }
 
+// Sin id de carrito: el backend lo guarda en la sesión de Django y no acepta
+// uno del cliente.
 type CartState = {
-  cartId: string
   items: CartLine[]
   shipping: ShippingRate | null
   drawerOpen: boolean
@@ -19,17 +20,9 @@ type CartState = {
   setDrawerOpen: (open: boolean) => void
 }
 
-function newCartId(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ||
-    `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`
-  )
-}
-
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
-      cartId: newCartId(),
       items: [],
       shipping: null,
       drawerOpen: false,
@@ -64,7 +57,6 @@ export const useCartStore = create<CartState>()(
     {
       name: 'tt-cart',
       partialize: (state) => ({
-        cartId: state.cartId,
         items: state.items,
         shipping: state.shipping,
       }),
@@ -87,14 +79,13 @@ export async function syncCart(
   stage = 'CART',
   customer: Record<string, string> = {},
 ): Promise<void> {
-  const { cartId, items } = useCartStore.getState()
+  const { items } = useCartStore.getState()
   const rows = cartRows(products).filter((row) =>
     items.some((item) => item.id === row.id),
   )
   await apiRequest('/cart/sync', {
     method: 'POST',
     body: JSON.stringify({
-      cartId,
       stage,
       customer,
       items: rows.map((row) => ({

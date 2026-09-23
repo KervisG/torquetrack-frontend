@@ -19,7 +19,7 @@ function quoteRequestOk(received: unknown[], email = { staff: false, customer: f
 
 describe('RequestQuotePage', () => {
   beforeEach(() => {
-    useCartStore.setState({ cartId: 'cart_test', items: [{ id: sampleProduct.id, qty: 2 }] })
+    useCartStore.setState({ items: [{ id: sampleProduct.id, qty: 2 }] })
   })
 
   afterEach(() => {
@@ -50,7 +50,6 @@ describe('RequestQuotePage', () => {
       {
         customer: { name: 'Jane Diesel', email: 'jane@example.com', phone: '555-0199' },
         items: [{ productId: sampleProduct.id, quantity: 2 }],
-        cartId: 'cart_test',
       },
     ])
   })

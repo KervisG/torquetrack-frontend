@@ -58,7 +58,6 @@ const PREFILL_FIELDS = [
 
 export function CheckoutPage() {
   const items = useCartStore((state) => state.items)
-  const cartId = useCartStore((state) => state.cartId)
   const shipping = useCartStore((state) => state.shipping)
   const setShipping = useCartStore((state) => state.setShipping)
   const setQty = useCartStore((state) => state.setQty)
@@ -235,7 +234,6 @@ export function CheckoutPage() {
       if (!taxed) throw new Error('Tax must be calculated before payment.')
       const result = await createCheckout({
         items: cartItems,
-        cartId,
         shipping: selection,
         vehicle,
         customer: {
@@ -363,7 +361,7 @@ export function CheckoutPage() {
                   </p>
                   {fitment.results.map((result) => (
                     <p key={result.id} className="text-sm text-muted-foreground">
-                      {result.partNumber || result.title} —{' '}
+                      {result.partNumber || result.title || result.id} —{' '}
                       {result.compatible ? 'Compatible' : (result.reasons || []).join('; ')}
                     </p>
                   ))}

@@ -70,7 +70,6 @@ describe('createCheckout', () => {
 
     await createCheckout({
       items: [{ id: 'p1', qty: 1 }],
-      cartId: 'cart_1',
       shipping: { shipmentId: 'shp_1', rateId: 'rate_ground' },
       vehicle: { vin: '1FT', year: '1996', make: 'Ford', model: 'F-250', engine: '7.3' },
       customer: {

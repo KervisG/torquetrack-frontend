@@ -1,6 +1,10 @@
+import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { useCartStore } from './cart-store'
+import { sampleProduct } from '@/test/catalog-handlers'
+import { server } from '@/test/msw-server'
+
+import { syncCart, useCartStore } from './cart-store'
 
 const RATE = { id: 'rate_ground', shipmentId: 'shp_1', rate: 8.5 }
 
@@ -35,5 +39,25 @@ describe('cart store shipping', () => {
     useCartStore.getState().remove('p1')
 
     expect(useCartStore.getState().shipping).toBeNull()
+  })
+})
+
+// El carrito es de la sesión de Django: el cliente nunca elige qué carrito
+// escribe, así que el body no lleva id.
+describe('syncCart', () => {
+  it('does not send a cart id', async () => {
+    let sent: Record<string, unknown> = {}
+    server.use(
+      http.post('/api/cart/sync/', async ({ request }) => {
+        sent = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json({ ok: true, status: 'ACTIVE' })
+      }),
+    )
+    useCartStore.setState({ items: [{ id: sampleProduct.id, qty: 1 }] })
+
+    await syncCart([sampleProduct])
+
+    expect(sent).not.toHaveProperty('cartId')
+    expect(sent.items).toEqual([expect.objectContaining({ productId: sampleProduct.id, quantity: 1 })])
   })
 })

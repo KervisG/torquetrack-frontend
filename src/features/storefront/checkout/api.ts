@@ -56,7 +56,6 @@ export function toShippingSelection(rate: ShippingRate | null): ShippingSelectio
 
 export function createCheckout(payload: {
   items: Array<{ id: string; qty: number }>
-  cartId: string
   shipping: ShippingSelection
   vehicle: VinVehicle
   customer: CheckoutCustomer

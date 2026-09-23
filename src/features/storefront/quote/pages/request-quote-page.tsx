@@ -21,7 +21,6 @@ import { requestQuote } from '../api'
 
 export function RequestQuotePage() {
   const items = useCartStore((state) => state.items)
-  const cartId = useCartStore((state) => state.cartId)
   const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
   const form = useForm<QuoteRequestValues>({
     resolver: zodResolver(quoteRequestSchema),
@@ -64,7 +63,6 @@ export function RequestQuotePage() {
       requestQuote({
         customer: { name: values.name, email: values.email, phone: values.phone },
         items: rows.map((row) => ({ productId: row.id, quantity: row.qty })),
-        cartId,
       }),
   })
 
