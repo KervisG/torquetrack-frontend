@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
 import { LineItemsTable } from '@/components/line-items-table'
 import { TotalsSummary } from '@/components/totals-summary'
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
@@ -33,24 +34,30 @@ export function OrderDetailPage() {
     return <PermissionNotice title="Order" message="You do not have permission to view orders." />
   }
 
-  const back = (
-    <Link to="/admin/orders" className="text-sm text-muted-foreground hover:text-foreground">
-      ← All orders
-    </Link>
-  )
+  const back = { to: '/admin/orders', label: 'All orders' }
 
   if (orders.isPending) {
-    return <p className="text-sm text-muted-foreground">Loading order…</p>
+    return (
+      <section>
+        <PageHeader title="Order" back={back} />
+        <p className="text-sm text-muted-foreground">Loading order…</p>
+      </section>
+    )
   }
   if (orders.error) {
-    return <FormError error={orders.error} />
+    return (
+      <section>
+        <PageHeader title="Order" back={back} />
+        <FormError error={orders.error} />
+      </section>
+    )
   }
 
   const order = orders.data.find((row) => row.id === id)
   if (!order) {
     return (
-      <section className="space-y-3">
-        {back}
+      <section>
+        <PageHeader title="Order" back={back} />
         <p className="text-sm text-muted-foreground">Order not found.</p>
       </section>
     )
@@ -61,18 +68,24 @@ export function OrderDetailPage() {
 
   return (
     <section className="space-y-6">
-      {back}
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">Order {order.number}</h1>
-        <Badge variant="outline">{order.status}</Badge>
-        <Badge variant={order.paymentStatus === 'PAID' ? 'secondary' : 'outline'}>
-          {order.paymentStatus}
-        </Badge>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Placed {formatDate(order.createdAt)}
-        {order.quoteNumber ? ` · From quote ${order.quoteNumber}` : ''}
-      </p>
+      <PageHeader
+        title={`Order ${order.number}`}
+        back={back}
+        meta={
+          <>
+            <Badge variant="outline">{order.status}</Badge>
+            <Badge variant={order.paymentStatus === 'PAID' ? 'secondary' : 'outline'}>
+              {order.paymentStatus}
+            </Badge>
+          </>
+        }
+        description={
+          <>
+            Placed {formatDate(order.createdAt)}
+            {order.quoteNumber ? ` · From quote ${order.quoteNumber}` : ''}
+          </>
+        }
+      />
       <div className="grid gap-6 md:grid-cols-2">
         <Section title="Customer">
           <CustomerDetails order={order} />

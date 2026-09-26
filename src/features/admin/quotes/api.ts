@@ -99,6 +99,26 @@ export function saveQuote(
   )
 }
 
+export function decodeQuoteVin(vin: string): Promise<{ vehicle: { vin: string; year: string; make: string; model: string; engine: string } }> {
+  return apiRequest('/admin/quotes/vin', {
+    method: 'POST',
+    body: JSON.stringify({ vin }),
+  })
+}
+
+export function estimateQuoteTax(payload: {
+  subtotal: number
+  coreCharge: number
+  shipping: number
+  state: string
+  zip: string
+}): Promise<{ tax: number; rate: number; source: string }> {
+  return apiRequest('/admin/quotes/tax', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function deleteQuote(id: string): Promise<{ ok: true; archived: boolean }> {
   return apiRequest<{ ok: true; archived: boolean }>(`/admin/quotes/${encodeURIComponent(id)}`, {
     method: 'DELETE',

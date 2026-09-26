@@ -41,7 +41,7 @@ describe('ActivatePage', () => {
 
     await choosePassword()
 
-    expect(await screen.findByRole('heading', { name: 'My account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
     expect(sent).toEqual({ token: 'abc123', password: 'diesel-pass-123' })
   })
 

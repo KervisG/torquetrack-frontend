@@ -1,24 +1,30 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
-import { SelectField } from '@/components/select-field'
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
 
 import { listQuotes } from '../api'
+import { QuoteEditorDialog } from '../components/quote-editor-dialog'
 import { QuotesTable } from '../components/quotes-table'
 import { adminQuoteKeys } from '../query-keys'
-import { QUOTE_STATUSES, type AdminQuote } from '../types'
+import type { AdminQuote } from '../types'
 
-const STATUS_FILTERS = [
-  { value: 'ALL', label: 'All statuses' },
-  ...QUOTE_STATUSES.map((status) => ({ value: status, label: status })),
-]
+const STATUS_TABS = [
+  { value: 'ALL', label: 'All' },
+  { value: 'BUILDING', label: 'Building' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'CONTACTED', label: 'Contacted' },
+  { value: 'EXPIRED', label: 'Expired' },
+  { value: 'CONVERTED', label: 'Converted' },
+  { value: 'LOST', label: 'Lost' },
+] as const
 
 // La API no filtra: el listado completo se filtra en el cliente.
 function matches(quote: AdminQuote, search: string, status: string): boolean {
@@ -44,6 +50,7 @@ export function QuotesPage() {
   const [params, setParams] = useSearchParams()
   const status = params.get('status')?.toUpperCase() || 'ALL'
   const [search, setSearch] = useState('')
+  const [creating, setCreating] = useState(false)
   const quotes = useQuery({
     queryKey: adminQuoteKeys.list(),
     queryFn: listQuotes,
@@ -59,35 +66,44 @@ export function QuotesPage() {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Quotes</h1>
-        {can('quotes.create') ? (
-          <Button asChild>
-            <Link to="/admin/quotes/new">New quote</Link>
-          </Button>
-        ) : null}
-      </div>
+      <PageHeader
+        title="Quotes"
+        description="Quotes prepared for customers, newest first."
+        actions={
+          can('quotes.create') ? (
+            <Button type="button" onClick={() => setCreating(true)}>
+              New quote
+            </Button>
+          ) : null
+        }
+      />
+      {can('quotes.create') ? (
+        <QuoteEditorDialog open={creating} onOpenChange={setCreating} />
+      ) : null}
       <Card>
         <CardContent className="space-y-4 pt-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              id="quote-search"
-              label="Search quotes"
-              placeholder="Number, customer, VIN or part"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <SelectField
-              id="quote-status-filter"
-              label="Status"
-              options={STATUS_FILTERS}
-              value={status}
-              onChange={(event) => {
-                const next = event.target.value
-                setParams(next === 'ALL' ? {} : { status: next }, { replace: true })
-              }}
-            />
+          <div role="tablist" aria-label="Status" className="flex flex-wrap gap-2">
+            {STATUS_TABS.map((tab) => (
+              <Button
+                key={tab.value}
+                type="button"
+                role="tab"
+                size="sm"
+                variant={status === tab.value ? 'default' : 'outline'}
+                aria-selected={status === tab.value}
+                onClick={() => setParams(tab.value === 'ALL' ? {} : { status: tab.value }, { replace: true })}
+              >
+                {tab.label}
+              </Button>
+            ))}
           </div>
+          <FormField
+            id="quote-search"
+            label="Search quotes"
+            placeholder="Number, customer, VIN or part"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
           {quotes.isPending ? (
             <p className="text-sm text-muted-foreground">Loading quotes…</p>
           ) : quotes.error ? (

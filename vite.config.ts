@@ -24,6 +24,25 @@ export default defineConfig({
       '@radix-ui/react-slot',
     ],
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        // Las dependencias cambian menos que el código de la app: en chunks
+        // propios el navegador las conserva en cache entre deploys. React y el
+        // router van aparte para que ningún chunk supere los 500 kB.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react',
+              test: /node_modules[\\/]\.pnpm[\\/](react|react-dom|react-router|scheduler)@/,
+              priority: 2,
+            },
+            { name: 'vendor', test: /node_modules/, priority: 1 },
+          ],
+        },
+      },
+    },
+  },
   server: {
     // Docker publica Django en el host como 8010 (ver backend/docker-compose.yml).
     proxy: {

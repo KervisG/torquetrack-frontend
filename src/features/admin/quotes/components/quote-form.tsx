@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useEffect, useState } from 'react'
+import { useFieldArray, useForm, useWatch } from 'react-hook-form'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
@@ -8,6 +9,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { adminQuoteSchema, type AdminQuoteValues } from '@/lib/validators/admin-quote'
 
+import { decodeQuoteVin } from '../api'
+import { QuoteCatalogPicker } from './quote-catalog-picker'
+import { QuoteTaxControls } from './quote-tax-controls'
 import { EDITABLE_QUOTE_STATUSES } from '../types'
 
 type QuoteFormProps = {
@@ -15,6 +19,11 @@ type QuoteFormProps = {
   submitting: boolean
   error: unknown
   onSubmit: (values: AdminQuoteValues) => void
+  canSearchCatalog?: boolean
+  // El modal manda el submit desde su barra fija y avisa si hay cambios.
+  formId?: string
+  hideSubmit?: boolean
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 const emptyLine = {
@@ -27,12 +36,30 @@ const emptyLine = {
 
 // Presentacional: no muestra totales. El backend los recalcula al guardar y
 // el detalle muestra los que devolvió; un subtotal armado acá sería decorativo.
-export function QuoteForm({ defaultValues, submitting, error, onSubmit }: QuoteFormProps) {
+export function QuoteForm({
+  defaultValues,
+  submitting,
+  error,
+  onSubmit,
+  canSearchCatalog = false,
+  formId,
+  hideSubmit = false,
+  onDirtyChange,
+}: QuoteFormProps) {
   const form = useForm<AdminQuoteValues>({
     resolver: zodResolver(adminQuoteSchema),
     defaultValues,
   })
+  const isDirty = form.formState.isDirty
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
   const items = useFieldArray({ control: form.control, name: 'items' })
+  const vehicle = useWatch({ control: form.control, name: 'vehicle' })
+  const lineItems = useWatch({ control: form.control, name: 'items' })
+  const shipping = useWatch({ control: form.control, name: 'shipping' })
+  const [vinError, setVinError] = useState<unknown>(null)
+  const [vinPending, setVinPending] = useState(false)
   const errors = form.formState.errors
   const statuses: string[] = [...EDITABLE_QUOTE_STATUSES]
   // Un estado fijado por una acción (EXPIRED, CONVERTED) se conserva tal cual.
@@ -40,6 +67,7 @@ export function QuoteForm({ defaultValues, submitting, error, onSubmit }: QuoteF
 
   return (
     <form
+      id={formId}
       aria-label="Quote"
       className="space-y-8"
       noValidate
@@ -73,8 +101,47 @@ export function QuoteForm({ defaultValues, submitting, error, onSubmit }: QuoteF
           <FormField id="quote-vehicle-make" label="Make" {...form.register('vehicle.make')} />
           <FormField id="quote-vehicle-model" label="Model" {...form.register('vehicle.model')} />
           <FormField id="quote-vehicle-engine" label="Engine" {...form.register('vehicle.engine')} />
-          <FormField id="quote-vehicle-vin" label="VIN" maxLength={17} {...form.register('vehicle.vin')} />
+          <FormField
+            id="quote-vehicle-vin"
+            label="VIN"
+            maxLength={17}
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                disabled={vinPending}
+                onClick={() => {
+                  const vin = form.getValues('vehicle.vin').trim()
+                  setVinPending(true)
+                  setVinError(null)
+                  void decodeQuoteVin(vin)
+                    .then((result) => {
+                      form.setValue('vehicle.year', result.vehicle.year, { shouldDirty: true })
+                      form.setValue('vehicle.make', result.vehicle.make, { shouldDirty: true })
+                      form.setValue('vehicle.model', result.vehicle.model, { shouldDirty: true })
+                      form.setValue('vehicle.engine', result.vehicle.engine, { shouldDirty: true })
+                      form.setValue('vehicle.vin', result.vehicle.vin, { shouldDirty: true })
+                    })
+                    .catch((caught: unknown) => setVinError(caught))
+                    .finally(() => setVinPending(false))
+                }}
+              >
+                {vinPending ? 'Searching…' : 'Search VIN'}
+              </Button>
+            }
+            {...form.register('vehicle.vin')}
+          />
         </div>
+        {vinError ? <FormError error={vinError} /> : null}
+      </fieldset>
+
+      <fieldset className="space-y-4">
+        <legend className="text-lg font-semibold">Catalog</legend>
+        <QuoteCatalogPicker
+          vehicle={vehicle ?? { year: '', make: '', model: '', engine: '', vin: '' }}
+          canSearch={canSearchCatalog}
+          onAdd={(line) => items.append(line)}
+        />
       </fieldset>
 
       <fieldset className="space-y-4">
@@ -153,14 +220,22 @@ export function QuoteForm({ defaultValues, submitting, error, onSubmit }: QuoteF
             error={errors.shipping?.message}
             {...form.register('shipping', { valueAsNumber: true })}
           />
-          <FormField
-            id="quote-tax"
-            label="Tax"
-            type="number"
-            min={0}
-            step="0.01"
-            error={errors.tax?.message}
-            {...form.register('tax', { valueAsNumber: true })}
+          <QuoteTaxControls
+            items={lineItems ?? []}
+            shipping={shipping ?? 0}
+            taxError={errors.tax?.message}
+            onTax={(tax) => form.setValue('tax', tax, { shouldDirty: true, shouldValidate: true })}
+            taxInput={
+              <FormField
+                id="quote-tax"
+                label="Tax"
+                type="number"
+                min={0}
+                step="0.01"
+                error={errors.tax?.message}
+                {...form.register('tax', { valueAsNumber: true })}
+              />
+            }
           />
           <SelectField
             id="quote-status"
@@ -181,9 +256,11 @@ export function QuoteForm({ defaultValues, submitting, error, onSubmit }: QuoteF
       </fieldset>
 
       <FormError error={error} />
-      <Button type="submit" disabled={submitting}>
-        {submitting ? 'Saving…' : 'Save quote'}
-      </Button>
+      {hideSubmit ? null : (
+        <Button type="submit" disabled={submitting}>
+          {submitting ? 'Saving…' : 'Save quote'}
+        </Button>
+      )}
     </form>
   )
 }

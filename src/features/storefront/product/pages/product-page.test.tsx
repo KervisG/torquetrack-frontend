@@ -13,6 +13,21 @@ describe('ProductPage', () => {
 
     expect(await screen.findByRole('heading', { name: sampleProduct.title })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeInTheDocument()
+    expect(screen.getByText('Chevrolet / GMC')).toBeInTheDocument()
+    expect(screen.getAllByText('502-550').length).toBeGreaterThan(0)
+    expect(screen.getByText('High-pressure fuel pump')).toBeInTheDocument()
+    expect(screen.getByText('12561204')).toBeInTheDocument()
+  })
+
+  it('offers a quote when the product has no price', async () => {
+    server.use(
+      http.get('/api/products/', () => HttpResponse.json([{ ...sampleProduct, price: 0 }])),
+    )
+    renderApp(`/product/${sampleProduct.id}`)
+
+    expect(await screen.findByText('Price on request')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /add to cart/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Request a quote' })).toHaveAttribute('href', '/quote')
   })
 
   it('shows not found when the id is missing from the catalog', async () => {

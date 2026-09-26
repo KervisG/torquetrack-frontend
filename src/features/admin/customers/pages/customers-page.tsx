@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { SelectField } from '@/components/select-field'
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
@@ -66,7 +67,7 @@ export function CustomersPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Customers</h1>
+      <PageHeader title="Customers" description="Customer profiles, portal invites and tax status." />
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">All customers</CardTitle>

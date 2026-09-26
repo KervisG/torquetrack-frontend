@@ -1,11 +1,10 @@
+import { Activity, FileText, LayoutDashboard, Package, ShoppingBag, ShoppingCart, UserCog, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link, NavLink } from 'react-router-dom'
 
-import { FormError } from '@/components/form-error'
-import { Button } from '@/components/ui/button'
+import { AppShell } from '@/components/app-shell/app-shell'
+import type { ShellNavGroup, ShellNavItem } from '@/components/app-shell/sidebar-nav'
 import { useSignOut } from '@/features/account/auth/hooks/use-sign-out'
 import { displayName, type SessionUser } from '@/features/account/auth/types'
-import { cn } from '@/lib/utils'
 
 import { hasAdminPermission } from '../types'
 
@@ -14,59 +13,56 @@ type AdminShellProps = {
   children: ReactNode
 }
 
-// Cada enlace se muestra solo con el permiso que exige su página.
-const NAV_LINKS = [
-  { to: '/admin/orders', label: 'Orders', permission: 'orders.view' },
-  { to: '/admin/quotes', label: 'Quotes', permission: 'quotes.view' },
-  { to: '/admin/customers', label: 'Customers', permission: 'customers.view' },
-  { to: '/admin/activity', label: 'Activity', permission: 'activity.view' },
-  { to: '/admin/users', label: 'Users', permission: 'users.manage' },
-] as const
+type AdminNavItem = ShellNavItem & { permission?: string }
 
-function navClass({ isActive }: { isActive: boolean }) {
-  return cn('text-muted-foreground hover:text-foreground', isActive && 'text-foreground font-medium')
+// Cada enlace se muestra solo con el permiso que exige su página. El
+// dashboard queda siempre: sin permiso muestra el aviso en lugar del 404.
+const NAV_GROUPS: { label: string; items: AdminNavItem[] }[] = [
+  { label: 'Overview', items: [{ to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
+  {
+    label: 'Sales',
+    items: [
+      { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, permission: 'orders.view' },
+      { to: '/admin/quotes', label: 'Quotes', icon: FileText, permission: 'quotes.view' },
+      { to: '/admin/carts', label: 'Carts', icon: ShoppingBag, permission: 'carts.view' },
+      { to: '/admin/customers', label: 'Customers', icon: Users, permission: 'customers.view' },
+    ],
+  },
+  {
+    label: 'Catalog',
+    items: [{ to: '/admin/products', label: 'Products', icon: Package, permission: 'products.view' }],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { to: '/admin/users', label: 'Users', icon: UserCog, permission: 'users.manage' },
+      { to: '/admin/activity', label: 'Activity', icon: Activity, permission: 'activity.view' },
+    ],
+  },
+]
+
+function navFor(user: SessionUser): ShellNavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    label: group.label,
+    items: group.items.filter((item) => !item.permission || hasAdminPermission(user, item.permission)),
+  })).filter((group) => group.items.length > 0)
 }
 
 export function AdminShell({ user, children }: AdminShellProps) {
   const signOut = useSignOut('/login')
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <div>
-            <Link to="/admin" className="font-semibold">
-              TorqueTrack Admin
-            </Link>
-            <p className="text-sm text-muted-foreground">{displayName(user)}</p>
-          </div>
-          <nav aria-label="Admin" className="flex flex-wrap items-center gap-4 text-sm">
-            <NavLink to="/admin" end className={navClass}>
-              Dashboard
-            </NavLink>
-            {NAV_LINKS.filter((link) => hasAdminPermission(user, link.permission)).map((link) => (
-              <NavLink key={link.to} to={link.to} className={navClass}>
-                {link.label}
-              </NavLink>
-            ))}
-            <Link to="/" className="text-muted-foreground hover:text-foreground">
-              Store
-            </Link>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => signOut.mutate()}
-              disabled={signOut.isPending}
-            >
-              Sign out
-            </Button>
-          </nav>
-        </div>
-        <div className="px-6 pb-3 empty:hidden">
-          <FormError error={signOut.error} />
-        </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">{children}</main>
-    </div>
+    <AppShell
+      navLabel="Admin"
+      homeHref="/admin"
+      area="Admin"
+      groups={navFor(user)}
+      user={{ name: displayName(user), email: user.email, role: user.role?.name ?? 'Staff' }}
+      onSignOut={() => signOut.mutate()}
+      signingOut={signOut.isPending}
+      signOutError={signOut.error}
+    >
+      {children}
+    </AppShell>
   )
 }

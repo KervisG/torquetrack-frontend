@@ -12,9 +12,15 @@ export type Product = {
   engineCode?: string
   fitment?: string
   manufacturer?: string
+  condition?: string
+  fuelType?: string
   partNumber?: string
   oemPart?: string
   aftermarketPart?: string
+  remanPart?: string
+  description?: string
+  warranty?: string
+  stock?: string
   supplier?: string
   price?: number
   compareAt?: number

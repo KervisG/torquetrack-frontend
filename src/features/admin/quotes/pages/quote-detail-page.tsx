@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
 import { LineItemsTable } from '@/components/line-items-table'
 import { TotalsSummary } from '@/components/totals-summary'
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
@@ -31,24 +32,30 @@ export function QuoteDetailPage() {
     return <PermissionNotice title="Quote" message="You do not have permission to view quotes." />
   }
 
-  const back = (
-    <Link to="/admin/quotes" className="text-sm text-muted-foreground hover:text-foreground">
-      ← All quotes
-    </Link>
-  )
+  const back = { to: '/admin/quotes', label: 'All quotes' }
 
   if (quotes.isPending) {
-    return <p className="text-sm text-muted-foreground">Loading quote…</p>
+    return (
+      <section>
+        <PageHeader title="Quote" back={back} />
+        <p className="text-sm text-muted-foreground">Loading quote…</p>
+      </section>
+    )
   }
   if (quotes.error) {
-    return <FormError error={quotes.error} />
+    return (
+      <section>
+        <PageHeader title="Quote" back={back} />
+        <FormError error={quotes.error} />
+      </section>
+    )
   }
 
   const quote = quotes.data.find((row) => row.id === id)
   if (!quote) {
     return (
-      <section className="space-y-3">
-        {back}
+      <section>
+        <PageHeader title="Quote" back={back} />
         <p className="text-sm text-muted-foreground">Quote not found.</p>
       </section>
     )
@@ -56,16 +63,18 @@ export function QuoteDetailPage() {
 
   return (
     <section className="space-y-6">
-      {back}
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">Quote {quote.number}</h1>
-        <Badge variant="outline">{quote.status}</Badge>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Created {formatDate(quote.createdAt)} · Expires {formatDate(quote.expiresAt)}
-        {quote.createdBy ? ` · By ${quote.createdBy}` : ''}
-        {quote.orderNumber ? ` · Order ${quote.orderNumber}` : ''}
-      </p>
+      <PageHeader
+        title={`Quote ${quote.number}`}
+        back={back}
+        meta={<Badge variant="outline">{quote.status}</Badge>}
+        description={
+          <>
+            Created {formatDate(quote.createdAt)} · Expires {formatDate(quote.expiresAt)}
+            {quote.createdBy ? ` · By ${quote.createdBy}` : ''}
+            {quote.orderNumber ? ` · Order ${quote.orderNumber}` : ''}
+          </>
+        }
+      />
       <Section title="Actions">
         <QuoteActions quote={quote} can={can} />
       </Section>

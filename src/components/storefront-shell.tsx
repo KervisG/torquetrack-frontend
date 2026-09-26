@@ -5,7 +5,6 @@ import { Link, Outlet } from 'react-router-dom'
 
 import { StorefrontButton } from '@/components/storefront-button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
   SheetContent,
@@ -26,6 +25,7 @@ export function StorefrontShell() {
   const drawerOpen = useCartStore((state) => state.drawerOpen)
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen)
   const remove = useCartStore((state) => state.remove)
+  const setQty = useCartStore((state) => state.setQty)
   const count = items.reduce((sum, item) => sum + item.qty, 0)
   const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
   const rows = items
@@ -46,23 +46,36 @@ export function StorefrontShell() {
 
   return (
     <div className="min-h-screen bg-muted/40 text-foreground">
-      <header className="sticky top-0 z-30 border-b bg-background">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <Link to="/" className="text-lg font-semibold tracking-tight">
-            TorqueTrack Diesel
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/85 text-white backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
+          <Link to="/" className="flex shrink-0 items-center gap-2.5">
+            <BrandMark />
+            <span className="leading-none">
+              <span className="block text-[13px] font-semibold tracking-[0.16em]">TORQUETRACK</span>
+              <span className="mt-1 block text-[10px] font-medium tracking-[0.32em] text-amber-400">
+                DIESEL
+              </span>
+            </span>
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link to="/" className="text-muted-foreground hover:text-foreground">
+          <nav className="flex items-center gap-1 sm:gap-2" aria-label="Store">
+            <Link to="/" className={navLink}>
               Shop
             </Link>
-            <Link to="/checkout" className="text-muted-foreground hover:text-foreground">
+            <Link to="/checkout" className={`${navLink} hidden sm:inline`}>
               Checkout
             </Link>
             <AccountNav />
-            <StorefrontButton type="button" tone="outline" onClick={() => setDrawerOpen(true)}>
+            <StorefrontButton
+              type="button"
+              tone="outline"
+              className="h-9 border-white/15 bg-white/10 px-3 text-white hover:bg-white/15 hover:text-white"
+              onClick={() => setDrawerOpen(true)}
+            >
               <ShoppingCart className="size-4" />
-              Cart
-              <Badge variant="secondary">{count}</Badge>
+              <span className="max-sm:sr-only">Cart</span>
+              <Badge className="border-transparent bg-amber-500 text-neutral-950 hover:bg-amber-500">
+                {count}
+              </Badge>
             </StorefrontButton>
           </nav>
         </div>
@@ -72,21 +85,21 @@ export function StorefrontShell() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3">
           <div>
             <p className="font-semibold">TorqueTrack Diesel</p>
+            <a className="mt-2 block text-sm text-sky-900 hover:underline" href="mailto:sales@torquetrackdiesel.com">
+              sales@torquetrackdiesel.com
+            </a>
+            <p className="mt-2 text-sm text-muted-foreground">Open 8:00 AM – 9:00 PM</p>
+          </div>
+          <div>
+            <p className="font-semibold">Shipping</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              OEM and aftermarket diesel parts for Ford, Chevrolet, GMC and RAM.
+              Calculated at checkout, before you pay.
             </p>
           </div>
           <div>
-            <p className="font-semibold">Shop without a VIN</p>
+            <p className="font-semibold">Returns</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Pick the truck brand, choose the component, then confirm fitment at checkout.
-            </p>
-          </div>
-          <div>
-            <p className="font-semibold">Need a hand?</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Have the VIN, OEM number or aftermarket number ready. We price the part before
-              shipping.
+              Email us before sending a part back. Fitment is confirmed at checkout.
             </p>
           </div>
         </div>
@@ -95,44 +108,86 @@ export function StorefrontShell() {
         <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
           <SheetHeader>
             <SheetTitle>Your Cart</SheetTitle>
-            <SheetDescription>Review parts before continuing to checkout.</SheetDescription>
+            <SheetDescription>
+              {count === 1 ? '1 part' : `${count} parts`}
+            </SheetDescription>
           </SheetHeader>
-          <div className="flex-1 space-y-3 overflow-auto py-4">
+          <div className="flex-1 overflow-auto py-4">
             {rows.length ? (
-              rows.map((row) => (
-                <div key={row.id} className="space-y-2">
-                  <div className="flex justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{row.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {row.partNumber} · Qty {row.qty}
-                      </p>
+              <ul className="divide-y">
+                {rows.map((row) => (
+                  <li key={row.id} className="flex gap-3 py-3">
+                    <Link
+                      to={`/product/${row.id}`}
+                      className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-md bg-muted"
+                      onClick={() => setDrawerOpen(false)}
+                    >
+                      {row.image ? (
+                        <img src={row.image} alt="" className="max-h-full max-w-full object-contain" />
+                      ) : null}
+                    </Link>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-medium leading-snug">{row.title}</p>
+                        <p className="shrink-0 text-sm font-semibold">
+                          {formatMoney(Number(row.price || 0) * row.qty)}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Part # {row.partNumber}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <StorefrontButton
+                          type="button"
+                          size="sm"
+                          tone="outline"
+                          className="size-8 px-0"
+                          aria-label={`Decrease ${row.title}`}
+                          onClick={() => setQty(row.id, row.qty - 1)}
+                        >
+                          −
+                        </StorefrontButton>
+                        <span className="w-6 text-center text-sm">{row.qty}</span>
+                        <StorefrontButton
+                          type="button"
+                          size="sm"
+                          tone="outline"
+                          className="size-8 px-0"
+                          aria-label={`Increase ${row.title}`}
+                          onClick={() => setQty(row.id, row.qty + 1)}
+                        >
+                          +
+                        </StorefrontButton>
+                        <StorefrontButton
+                          type="button"
+                          tone="danger"
+                          className="ml-auto h-auto p-0 text-sm"
+                          onClick={() => remove(row.id)}
+                        >
+                          Remove
+                        </StorefrontButton>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p>{formatMoney(Number(row.price || 0) * row.qty)}</p>
-                      <StorefrontButton
-                        type="button"
-                        tone="danger"
-                        className="h-auto p-0"
-                        onClick={() => remove(row.id)}
-                      >
-                        Remove
-                      </StorefrontButton>
-                    </div>
-                  </div>
-                  <Separator />
-                </div>
-              ))
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <p className="text-muted-foreground">Your cart is empty.</p>
+              <div className="flex h-full flex-col items-start justify-center gap-3">
+                <p className="text-muted-foreground">Your cart is empty.</p>
+                <StorefrontButton asChild tone="outline" onClick={() => setDrawerOpen(false)}>
+                  <Link to="/">Continue shopping</Link>
+                </StorefrontButton>
+              </div>
             )}
           </div>
-          <SheetFooter className="flex-col gap-4 sm:flex-col">
+          <SheetFooter className="flex-col gap-3 border-t pt-4 sm:flex-col">
             <p className="flex w-full justify-between font-semibold">
               <span>Parts subtotal</span>
               <span>{formatMoney(subtotal)}</span>
             </p>
-            <StorefrontButton asChild className="w-full" onClick={() => setDrawerOpen(false)}>
+            <StorefrontButton
+              asChild
+              className="w-full rounded-full bg-amber-400 text-neutral-950 hover:bg-amber-500"
+              onClick={() => setDrawerOpen(false)}
+            >
               <Link to="/checkout">Continue to Checkout</Link>
             </StorefrontButton>
             {rows.length ? (
@@ -152,7 +207,20 @@ export function StorefrontShell() {
   )
 }
 
-const navLink = 'text-muted-foreground hover:text-foreground'
+// Monograma provisional de dos T. Se cambia cuando llegue el logo encargado.
+function BrandMark() {
+  return (
+    <span className="grid size-8 shrink-0 place-items-center bg-amber-500 text-neutral-950" aria-hidden>
+      <svg viewBox="0 0 28 20" className="h-3.5 w-5" fill="currentColor">
+        <path d="M0 0h12v3.2H7.6V20H4.4V3.2H0V0z" />
+        <path d="M16 0h12v3.2H23.6V20H20.4V3.2H16V0z" />
+      </svg>
+    </span>
+  )
+}
+
+const navLink =
+  'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-white/75 transition-colors hover:bg-white/10 hover:text-white'
 
 // Con sesión se ofrece el portal (y el panel si la cuenta tiene Role); sin
 // sesión, un solo acceso para clientes y staff.
@@ -182,7 +250,7 @@ function AccountNav() {
       <StorefrontButton
         type="button"
         tone="link"
-        className="h-auto p-0 text-muted-foreground"
+        className="h-auto shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-white/75 hover:bg-white/10 hover:text-white hover:no-underline"
         onClick={() => signOut.mutate()}
         disabled={signOut.isPending}
       >

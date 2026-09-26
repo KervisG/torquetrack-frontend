@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ApiError } from '@/lib/api-client'
 import { useSession } from '@/features/account/auth/hooks/use-session'
+import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { hasAdminPermission } from '@/features/admin/auth/types'
 
 import { getDashboard } from '../api'
@@ -26,17 +28,19 @@ export function DashboardPage() {
 
   if (!allowed) {
     return (
-      <section>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          You do not have permission to view the dashboard.
-        </p>
-      </section>
+      <PermissionNotice title="Dashboard" message="You do not have permission to view the dashboard." />
     )
   }
 
+  const header = <PageHeader title="Dashboard" description="Store activity at a glance." />
+
   if (dashboard.isPending) {
-    return <p className="text-muted-foreground">Loading dashboard…</p>
+    return (
+      <section>
+        {header}
+        <p className="text-sm text-muted-foreground">Loading dashboard…</p>
+      </section>
+    )
   }
 
   if (dashboard.error) {
@@ -44,18 +48,24 @@ export function DashboardPage() {
       dashboard.error instanceof ApiError
         ? dashboard.error.message
         : 'Could not load dashboard.'
-    return <p className="text-destructive">{message}</p>
+    return (
+      <section>
+        {header}
+        <p className="text-sm text-destructive">{message}</p>
+      </section>
+    )
   }
 
   const counts = dashboard.data.counts
   // Un conteo enlaza a su pantalla solo si el rol puede abrirla.
   const canOrders = user ? hasAdminPermission(user, 'orders.view') : false
   const canQuotes = user ? hasAdminPermission(user, 'quotes.view') : false
+  const canCarts = user ? hasAdminPermission(user, 'carts.view') : false
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
-      <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {header}
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Metric
           label="Orders"
           value={String(counts.orders)}
@@ -71,8 +81,16 @@ export function DashboardPage() {
           value={String(counts.buildingQuotes)}
           to={canQuotes ? '/admin/quotes?status=BUILDING' : undefined}
         />
-        <Metric label="Active carts" value={String(counts.activeCarts)} />
-        <Metric label="Abandoned carts" value={String(counts.abandonedCarts)} />
+        <Metric
+          label="Active carts"
+          value={String(counts.activeCarts)}
+          to={canCarts ? '/admin/carts?status=ACTIVE' : undefined}
+        />
+        <Metric
+          label="Abandoned carts"
+          value={String(counts.abandonedCarts)}
+          to={canCarts ? '/admin/carts?status=ABANDONED' : undefined}
+        />
         <Metric label="Sales today" value={money.format(counts.salesToday)} />
       </ul>
     </section>

@@ -1,11 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 import { FormField } from '@/components/form-field'
 import { StorefrontButton } from '@/components/storefront-button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -14,51 +12,82 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ApiError } from '@/lib/api-client'
-import { formatMoney } from '@/lib/money'
-import { useCartStore } from '@/stores/cart-store'
+import { formatMoney, hasListedPrice } from '@/lib/money'
 
 import { listProducts } from '../api'
-import { BrandPicker, CATALOG_BRANDS } from '../components/brand-picker'
+import { HomeHero } from '../components/home-hero'
 import { CategoryPicker } from '../components/category-picker'
-import { filterProducts } from '../filter-products'
+import { PriceRange } from '../components/price-range'
+import { ProductPhoto } from '../components/product-photo'
+import { catalogBrands, catalogCategories, catalogConditions, filterProducts } from '../filter-products'
 import { catalogKeys } from '../query-keys'
 import type { VinVehicle } from '../types'
 import { decodeVin } from '../../vin/api'
 
-const TRUST_POINTS = [
-  { title: 'VIN is optional', body: 'No door sticker? Pick Ford, Chevrolet, GMC or RAM and browse.' },
-  { title: 'OEM + aftermarket', body: 'Search the factory number or the aftermarket part number.' },
-  { title: 'Ships from the US', body: 'We price the part first. Shipping is quoted at checkout.' },
-  { title: 'Fitment at checkout', body: 'Confirm the truck before you pay. Wrong-fit parts do not ship.' },
-] as const
+// Cuatro columnas por cuatro filas. El resto pasa a la página siguiente.
+const PAGE_SIZE = 16
 
 export function CatalogPage() {
   const [brand, setBrand] = useState('')
   const [category, setCategory] = useState('All')
   const [query, setQuery] = useState('')
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null)
+  const [condition, setCondition] = useState('')
   const [sort, setSort] = useState('featured')
   const [vin, setVin] = useState('')
   const [vehicle, setVehicle] = useState<VinVehicle | null>(null)
   const [vinError, setVinError] = useState('')
-  const add = useCartStore((state) => state.add)
-  const setDrawerOpen = useCartStore((state) => state.setDrawerOpen)
+  const [page, setPage] = useState(1)
+  const resultsRef = useRef<HTMLElement>(null)
+  const minPrice = priceRange ? String(priceRange[0]) : ''
+  const maxPrice = priceRange ? String(priceRange[1]) : ''
+  const filterKey = [brand, category, query, minPrice, maxPrice, condition, sort, vehicle?.vin ?? ''].join('|')
+  const [seenFilter, setSeenFilter] = useState(filterKey)
+  // Al cambiar búsqueda o filtros se vuelve a la primera página en este render,
+  // antes de recortar la lista.
+  let currentPage = page
+  if (seenFilter !== filterKey) {
+    setSeenFilter(filterKey)
+    setPage(1)
+    currentPage = 1
+  }
   const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
+
+  const brands = useMemo(() => catalogBrands(products.data || []), [products.data])
+  const categories = useMemo(() => catalogCategories(products.data || []), [products.data])
+  const conditions = useMemo(() => catalogConditions(products.data || []), [products.data])
+  const priceCeiling = useMemo(() => {
+    const prices = (products.data || []).map((product) => Number(product.price || 0))
+    return Math.ceil(Math.max(0, ...prices))
+  }, [products.data])
 
   const rows = useMemo(() => {
     const filtered = filterProducts(products.data || [], {
       brand,
       category,
       query,
+      minPrice,
+      maxPrice,
+      condition,
       vehicle,
     })
     if (sort === 'low') return [...filtered].sort((a, b) => Number(a.price) - Number(b.price))
     if (sort === 'high') return [...filtered].sort((a, b) => Number(b.price) - Number(a.price))
     return filtered
-  }, [products.data, brand, category, query, vehicle, sort])
+  }, [products.data, brand, category, query, minPrice, maxPrice, condition, vehicle, sort])
 
-  function chooseBrand(name: string) {
-    setBrand(name)
-    setVehicle(null)
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const safePage = Math.min(currentPage, pageCount)
+  const pageRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  function goToPage(next: number) {
+    setPage(next)
+    // jsdom no implementa el desplazamiento; en el navegador sube al listado.
+    try {
+      resultsRef.current?.scrollIntoView({ block: 'start' })
+    } catch {
+      // Sin desplazamiento el cambio de página igual se ve.
+    }
   }
 
   async function onVinSearch() {
@@ -66,10 +95,6 @@ export function CatalogPage() {
     try {
       const result = await decodeVin(vin.trim().toUpperCase())
       setVehicle({ ...result.vehicle, vin: vin.trim().toUpperCase() })
-      const detected = CATALOG_BRANDS.find((item) =>
-        result.vehicle.make.toLowerCase().includes(item.name.toLowerCase()),
-      )
-      if (detected) setBrand(detected.name)
     } catch (error) {
       setVehicle(null)
       setVinError(error instanceof ApiError ? error.message : 'VIN lookup failed')
@@ -77,149 +102,101 @@ export function CatalogPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <section className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">OEM + aftermarket diesel parts</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight">
-            Find it. Price it.
-            <br />
-            Ship it fast.
-          </h1>
-          <p className="mt-3 text-lg text-muted-foreground">
-            A VIN is optional. If you do not have it, pick the truck brand and shop by component.
-          </p>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-xl">I have a VIN</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                17 characters on the driver-door sticker or windshield. We hide parts that do not
-                fit.
+    <main>
+      <HomeHero />
+      <div className="flex flex-col gap-6 py-8 pl-4 pr-4 lg:flex-row lg:items-start lg:pl-6 lg:pr-8">
+        <aside className="w-full shrink-0 space-y-6 lg:sticky lg:top-20 lg:w-72">
+          <FilterGroup title="Search">
+            <FormField
+              id="part-search"
+              label="Search"
+              labelClassName="sr-only"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Part name, OEM # or aftermarket #"
+            />
+          </FilterGroup>
+          <FilterGroup title="Brand">
+            <select
+              aria-label="Brand"
+              value={brand}
+              onChange={(event) => setBrand(event.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">All brands</option>
+              {brands.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </FilterGroup>
+          <FilterGroup title="Category">
+            <CategoryPicker categories={categories} value={category} onChange={setCategory} />
+          </FilterGroup>
+          <FilterGroup title="Condition">
+            <select
+              aria-label="Condition"
+              value={condition}
+              onChange={(event) => setCondition(event.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">All conditions</option>
+              {conditions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </FilterGroup>
+          <FilterGroup title="Price">
+            <PriceRange ceiling={priceCeiling} value={priceRange} onChange={setPriceRange} />
+          </FilterGroup>
+          <FilterGroup title="VIN">
+            {/* El botón va debajo: al lado recortaba los 17 caracteres del VIN. */}
+            <FormField
+              id="vin-lookup"
+              label="VIN"
+              labelClassName="sr-only"
+              value={vin}
+              onChange={(event) => setVin(event.target.value.toUpperCase())}
+              maxLength={17}
+              placeholder="17-character VIN"
+              spellCheck={false}
+              autoComplete="off"
+              className="h-11 font-mono text-base tracking-wide md:text-base"
+              error={vinError}
+            />
+            <StorefrontButton type="button" className="w-full" onClick={() => void onVinSearch()}>
+              Apply
+            </StorefrontButton>
+            {vehicle ? (
+              <p className="text-sm">
+                {vehicle.year} {vehicle.make} {vehicle.model}
+                {vehicle.engine ? ` · ${vehicle.engine}` : ''}
+                <StorefrontButton
+                  type="button"
+                  tone="link"
+                  className="ml-2 h-auto p-0"
+                  onClick={() => {
+                    setVehicle(null)
+                    setVin('')
+                  }}
+                >
+                  Clear VIN
+                </StorefrontButton>
               </p>
-            </CardHeader>
-            <CardContent>
-              <FormField
-                id="vin-lookup"
-                label="Truck VIN"
-                value={vin}
-                onChange={(event) => setVin(event.target.value)}
-                maxLength={17}
-                placeholder="1FT8W3DT0KEC12345"
-                error={vinError}
-                action={
-                  <StorefrontButton type="button" onClick={() => void onVinSearch()}>
-                    Find parts
-                  </StorefrontButton>
-                }
-                hint={
-                  vehicle ? (
-                    <p className="text-sm">
-                      Shopping for {vehicle.year} {vehicle.make} {vehicle.model}
-                      {vehicle.engine ? ` · ${vehicle.engine}` : ''}
-                    </p>
-                  ) : null
-                }
-              />
-            </CardContent>
-          </Card>
-        </div>
+            ) : null}
+          </FilterGroup>
+        </aside>
 
-        <div>
-          <h2 className="text-2xl font-semibold">No VIN? Shop by truck</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Choose Ford, Chevrolet, GMC or RAM. You can confirm fitment later at checkout.
-          </p>
-          <div className="mt-4">
-            <BrandPicker value={brand} onChange={chooseBrand} />
-          </div>
-          {!brand ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Select a brand to browse compatible parts.
+        <section ref={resultsRef} className="min-w-0 flex-1 scroll-mt-20">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {products.isPending ? 'Loading parts…' : resultLabel(rows.length, safePage)}
             </p>
-          ) : (
-            <p className="mt-4 text-sm">
-              Showing {brand} parts{category !== 'All' ? ` in ${category}` : ''}.
-              <StorefrontButton
-                type="button"
-                tone="link"
-                className="ml-2 h-auto p-0"
-                onClick={() => {
-                  setBrand('')
-                  setVehicle(null)
-                }}
-              >
-                Change truck
-              </StorefrontButton>
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {TRUST_POINTS.map((item) => (
-          <Card key={item.title}>
-            <CardHeader>
-              <CardTitle className="text-base">{item.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">{item.body}</CardContent>
-          </Card>
-        ))}
-      </section>
-
-      {!brand ? (
-        <>
-          <section className="mt-10">
-            <h2 className="text-2xl font-semibold">Shop by component</h2>
-            <p className="mt-1 text-muted-foreground">
-              Start with the job. Then pick a truck brand to see prices.
-            </p>
-            <div className="mt-4">
-              <CategoryPicker value={category} onChange={setCategory} />
-            </div>
-          </section>
-
-          <section className="mt-10 grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">1. Tell us the truck</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Use a VIN if you have it. If not, tap the Ford, Chevrolet, GMC or RAM truck.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">2. Choose the part</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Filter by turbo, injector, DPF or search the OEM and aftermarket numbers.
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">3. Check out</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                Review the cart, confirm fitment and pay on the secure checkout page.
-              </CardContent>
-            </Card>
-          </section>
-        </>
-      ) : (
-        <section className="mt-10 space-y-5">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end">
-            <div className="flex-1">
-              <FormField
-                id="part-search"
-                label="Search these parts"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="OEM #, aftermarket # or part name"
-              />
-            </div>
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="w-full bg-background md:w-52">
+              <SelectTrigger aria-label="Sort" className="w-full bg-background sm:w-52">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
@@ -230,66 +207,110 @@ export function CatalogPage() {
             </Select>
           </div>
 
-          <CategoryPicker layout="chips" value={category} onChange={setCategory} />
-          <p className="text-sm text-muted-foreground">{rows.length} products</p>
-
-          {rows.length === 0 ? (
+          {products.isError || products.isPending ? null : rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No parts match these filters.</p>
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map((product) => (
-                <li key={product.id}>
-                  <Card className="h-full overflow-hidden">
-                    <div className="flex h-44 items-center justify-center bg-muted p-4">
-                      {product.image ? (
-                        <img
-                          src={product.image}
-                          alt={product.title}
-                          className="h-full w-full object-contain"
-                        />
-                      ) : null}
-                    </div>
-                    <CardHeader>
-                      <Badge variant="secondary" className="w-fit">
-                        {product.category}
-                      </Badge>
-                      <CardTitle className="text-base leading-snug">{product.title}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{product.fitment}</p>
-                    </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground">
-                      <p>OEM: {product.oemPart || '—'}</p>
-                      <p>Part #: {product.partNumber || '—'}</p>
-                      <p className="mt-3 text-2xl font-semibold text-foreground">
-                        {formatMoney(product.price)}
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {pageRows.map((product) => (
+                <li key={product.id} className="flex h-full flex-col overflow-hidden rounded-md border bg-background">
+                  <Link to={`/product/${product.id}`} className="block h-40 bg-neutral-200">
+                    <ProductPhoto
+                      src={product.image}
+                      partNumber={product.partNumber}
+                      className="h-full w-full object-contain"
+                    />
+                  </Link>
+                  <div className="flex flex-1 flex-col p-4">
+                    {product.condition ? (
+                      <p className="mb-2 w-fit rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700">
+                        {product.condition}
                       </p>
-                    </CardContent>
-                    <CardFooter className="gap-2">
-                      <StorefrontButton
-                        type="button"
-                        onClick={() => {
-                          add(product.id)
-                          setDrawerOpen(true)
-                        }}
-                      >
-                        Add to Cart
-                      </StorefrontButton>
-                      <StorefrontButton asChild tone="outline">
-                        <Link to={`/product/${product.id}`}>View Details</Link>
-                      </StorefrontButton>
-                    </CardFooter>
-                  </Card>
+                    ) : null}
+                    <Link
+                      to={`/product/${product.id}`}
+                      className="line-clamp-2 text-sm font-medium text-sky-900 hover:text-amber-700 hover:underline"
+                    >
+                      {product.title}
+                    </Link>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Part # {product.partNumber || '—'}
+                    </p>
+                    <p className="mt-auto pt-3 text-xl">
+                      {hasListedPrice(product.price) ? formatMoney(product.price) : 'Price on request'}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
-        </section>
-      )}
 
-      {products.error ? (
-        <p className="mt-6 text-sm text-destructive">
-          {products.error instanceof ApiError ? products.error.message : 'Could not load products.'}
-        </p>
-      ) : null}
+          {pageCount > 1 ? (
+            <nav aria-label="Results pages" className="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                className="h-9 rounded-md border bg-background px-3 text-sm disabled:opacity-40"
+                disabled={safePage === 1}
+                onClick={() => goToPage(safePage - 1)}
+              >
+                Previous
+              </button>
+              {visiblePages(safePage, pageCount).map((number) => (
+                <button
+                  key={number}
+                  type="button"
+                  aria-current={number === safePage ? 'page' : undefined}
+                  className={
+                    number === safePage
+                      ? 'h-9 min-w-9 rounded-md bg-neutral-950 px-3 text-sm text-white'
+                      : 'h-9 min-w-9 rounded-md border bg-background px-3 text-sm'
+                  }
+                  onClick={() => goToPage(number)}
+                >
+                  {number}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="h-9 rounded-md border bg-background px-3 text-sm disabled:opacity-40"
+                disabled={safePage === pageCount}
+                onClick={() => goToPage(safePage + 1)}
+              >
+                Next
+              </button>
+            </nav>
+          ) : null}
+
+          {products.error ? (
+            <p className="mt-4 text-sm text-destructive">
+              {products.error instanceof ApiError
+                ? products.error.message
+                : 'Could not load products.'}
+            </p>
+          ) : null}
+        </section>
+      </div>
     </main>
+  )
+}
+
+function resultLabel(total: number, page: number) {
+  if (total <= PAGE_SIZE) return `${total} ${total === 1 ? 'result' : 'results'}`
+  const start = (page - 1) * PAGE_SIZE + 1
+  const end = Math.min(total, page * PAGE_SIZE)
+  return `${start}–${end} of ${total} results`
+}
+
+function visiblePages(current: number, count: number) {
+  const end = Math.min(count, Math.max(current + 2, 5))
+  const start = Math.max(1, end - 4)
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+}
+
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <h2 className="text-sm font-bold">{title}</h2>
+      {children}
+    </div>
   )
 }

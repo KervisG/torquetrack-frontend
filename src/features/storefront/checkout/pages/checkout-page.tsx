@@ -255,8 +255,8 @@ export function CheckoutPage() {
       <StorefrontButton asChild tone="link" className="px-0">
         <Link to="/">← Back to TorqueTrack</Link>
       </StorefrontButton>
-      <h1 className="mt-4 text-4xl font-semibold tracking-tight">Cart & Secure Checkout</h1>
-      <p className="mt-2 max-w-2xl text-muted-foreground">
+      <h1 className="mt-4 text-3xl font-semibold tracking-tight">Cart & Secure Checkout</h1>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Review your parts, verify the VIN, confirm shipping and tax, then continue to the payment
         provider&apos;s secure page.
       </p>
@@ -273,53 +273,74 @@ export function CheckoutPage() {
         className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]"
         onSubmit={form.handleSubmit((values) => void onPay(values))}
       >
-        <div className="space-y-6">
+        <div className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>1. Your Cart</CardTitle>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-base">1. Your Cart</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-2">
               {rows.length ? (
-                <ul className="space-y-3">
+                <ul className="divide-y">
                   {rows.map((row) => (
-                    <li key={row.id} className="space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="font-semibold">{row.title}</p>
-                          <p className="text-sm text-muted-foreground">{row.partNumber}</p>
+                    <li key={row.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+                      <Link
+                        to={`/product/${row.id}`}
+                        className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-md bg-muted"
+                      >
+                        {row.image ? (
+                          <img src={row.image} alt="" className="max-h-full max-w-full object-contain" />
+                        ) : null}
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium leading-snug">{row.title}</p>
+                            <p className="text-sm text-muted-foreground">Part # {row.partNumber}</p>
+                          </div>
+                          <p className="shrink-0 font-semibold">
+                            {formatMoney((Number(row.price) + Number(row.coreCharge || 0)) * row.qty)}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="mt-2 flex items-center gap-2">
                           <StorefrontButton
                             type="button"
                             size="sm"
                             tone="outline"
+                            className="size-8 px-0"
                             onClick={() => setQty(row.id, row.qty - 1)}
                           >
                             −
                           </StorefrontButton>
-                          <span className="w-6 text-center">{row.qty}</span>
+                          <span className="w-6 text-center text-sm">{row.qty}</span>
                           <StorefrontButton
                             type="button"
                             size="sm"
                             tone="outline"
+                            className="size-8 px-0"
                             onClick={() => setQty(row.id, row.qty + 1)}
                           >
                             +
                           </StorefrontButton>
-                          <strong>
-                            {formatMoney((Number(row.price) + Number(row.coreCharge || 0)) * row.qty)}
-                          </strong>
-                          <StorefrontButton type="button" tone="danger" onClick={() => remove(row.id)}>
+                          <StorefrontButton
+                            type="button"
+                            tone="danger"
+                            className="ml-auto h-auto p-0 text-sm"
+                            onClick={() => remove(row.id)}
+                          >
                             Remove
                           </StorefrontButton>
                         </div>
                       </div>
-                      <Separator />
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-destructive">Your cart is empty.</p>
+                <div>
+                  <p className="text-sm text-muted-foreground">Your cart is empty.</p>
+                  <Link to="/" className="mt-2 inline-block text-sm font-medium text-sky-900 hover:underline">
+                    Continue shopping
+                  </Link>
+                </div>
               )}
               {invalidPrice ? (
                 <p className="mt-3 text-sm text-destructive">
@@ -330,30 +351,32 @@ export function CheckoutPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>2. Vehicle / VIN Verification</CardTitle>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-base">2. Vehicle / VIN Verification</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3 p-4 pt-2">
+              {/* El botón va debajo: al lado recortaba los 17 caracteres. */}
               <FormField
                 id="checkout-vin"
                 label="VIN"
                 value={vin}
-                onChange={(event) => setVin(event.target.value)}
+                onChange={(event) => setVin(event.target.value.toUpperCase())}
                 maxLength={17}
-                placeholder="Enter 17-character VIN"
-                action={
-                  <StorefrontButton type="button" onClick={() => void onVerifyVin()}>
-                    Verify VIN
-                  </StorefrontButton>
-                }
+                placeholder="17-character VIN"
+                spellCheck={false}
+                autoComplete="off"
+                className="h-11 font-mono text-base tracking-wide md:text-base"
               />
+              <StorefrontButton type="button" onClick={() => void onVerifyVin()}>
+                Verify VIN
+              </StorefrontButton>
               {vehicle ? (
-                <p className="mt-3 text-sm">
+                <p className="text-sm">
                   VIN verified: {vehicle.year} {vehicle.make} {vehicle.model}
                 </p>
               ) : null}
               {fitment ? (
-                <div className="mt-3">
+                <div>
                   <p className={fitment.compatible ? 'text-foreground' : 'text-destructive'}>
                     {fitment.compatible
                       ? 'All cart items match this VIN'
@@ -371,30 +394,32 @@ export function CheckoutPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>3. Customer & Shipping</CardTitle>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-base">3. Customer & Shipping</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-2">
               <div className="grid gap-3 md:grid-cols-2">
                 {CUSTOMER_FIELDS.map(([field, label]) => (
                   <FormField
                     key={field}
                     id={field}
                     label={label}
-                    placeholder={label}
                     readOnly={field === 'email' && Boolean(accountEmail)}
                     {...form.register(field)}
                   />
                 ))}
               </div>
 
-              <h2 className="mt-8 text-lg font-semibold">Shipping Method</h2>
-              <StorefrontButton type="button" className="mt-3" onClick={() => void onRates()}>
+              <h2 className="mt-6 text-base font-semibold">Shipping Method</h2>
+              <StorefrontButton type="button" className="mt-3" tone="outline" onClick={() => void onRates()}>
                 Get Shipping Rates
               </StorefrontButton>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 {rates.map((option) => (
-                  <Card key={option.label}>
+                  <Card
+                    key={option.label}
+                    className={shipping?.id && shipping.id === option.rate?.id ? 'border-amber-400 ring-1 ring-amber-400' : undefined}
+                  >
                     <CardContent className="p-3">
                       <p className="text-sm text-muted-foreground">{option.label}</p>
                       {option.rate ? (
@@ -427,10 +452,10 @@ export function CheckoutPage() {
         </div>
 
         <Card className="h-fit lg:sticky lg:top-24">
-          <CardHeader>
-            <CardTitle>Order Summary</CardTitle>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-base">Order Summary</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-2">
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Parts</dt>
@@ -461,6 +486,7 @@ export function CheckoutPage() {
               </StorefrontButton>
               <StorefrontButton
                 type="submit"
+                className="rounded-full bg-amber-400 text-neutral-950 hover:bg-amber-500"
                 disabled={!rows.length || invalidPrice || !shipping || !fitmentApproved || paying}
               >
                 {paying ? 'Preparing payment…' : 'Continue to Secure Card Payment'}

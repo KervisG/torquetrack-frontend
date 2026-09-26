@@ -62,7 +62,7 @@ describe('LoginPage', () => {
 
     await signIn('pat@example.com', 'secret')
 
-    expect(await screen.findByRole('heading', { name: 'My account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
   })
 
   it('shows the API error when credentials are wrong', async () => {
@@ -112,7 +112,7 @@ describe('LoginPage', () => {
     server.use(authenticatedSession(customerUser), accountOk(), productsOk())
     renderApp('/login')
 
-    expect(await screen.findByRole('heading', { name: 'My account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
   })
 
   it('redirects the legacy admin login to the shared login', async () => {

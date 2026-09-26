@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
@@ -32,24 +33,30 @@ export function CustomerDetailPage() {
     )
   }
 
-  const back = (
-    <Link to="/admin/customers" className="text-sm text-muted-foreground hover:text-foreground">
-      ← All customers
-    </Link>
-  )
+  const back = { to: '/admin/customers', label: 'All customers' }
 
   if (customers.isPending) {
-    return <p className="text-sm text-muted-foreground">Loading customer…</p>
+    return (
+      <section>
+        <PageHeader title="Customer" back={back} />
+        <p className="text-sm text-muted-foreground">Loading customer…</p>
+      </section>
+    )
   }
   if (customers.error) {
-    return <FormError error={customers.error} />
+    return (
+      <section>
+        <PageHeader title="Customer" back={back} />
+        <FormError error={customers.error} />
+      </section>
+    )
   }
 
   const customer = customers.data.find((row) => row.id === id)
   if (!customer) {
     return (
-      <section className="space-y-3">
-        {back}
+      <section>
+        <PageHeader title="Customer" back={back} />
         <p className="text-sm text-muted-foreground">Customer not found.</p>
       </section>
     )
@@ -65,8 +72,7 @@ export function CustomerDetailPage() {
 
   return (
     <section className="space-y-6">
-      {back}
-      <h1 className="text-2xl font-semibold">{customerLabel(customer)}</h1>
+      <PageHeader title={customerLabel(customer)} back={back} />
       <Card>
         <CardHeader>
           <CardTitle className="text-lg" id="customer-profile-title">

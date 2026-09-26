@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { SelectField } from '@/components/select-field'
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Card, CardContent } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
@@ -61,7 +62,7 @@ export function OrdersPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Orders</h1>
+      <PageHeader title="Orders" description="Every order placed in the store, newest first." />
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4 sm:grid-cols-3">

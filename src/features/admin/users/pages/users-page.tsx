@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
 import { FormError } from '@/components/form-error'
+import { PageHeader } from '@/components/app-shell/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useSession } from '@/features/account/auth/hooks/use-session'
+import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { hasAdminPermission } from '@/features/admin/auth/types'
 
 import { deleteUser, listRoles, listUsers } from '../api'
@@ -29,21 +31,14 @@ export function UsersPage() {
   })
 
   if (!allowed || !user) {
-    return (
-      <section>
-        <h1 className="text-2xl font-semibold">Users</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          You do not have permission to manage users.
-        </p>
-      </section>
-    )
+    return <PermissionNotice title="Users" message="You do not have permission to manage users." />
   }
 
   const editing = users.data?.find((row) => row.id === editingId)
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">Users</h1>
+      <PageHeader title="Users" description="Accounts that can sign in and the role each one holds." />
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">All accounts</CardTitle>

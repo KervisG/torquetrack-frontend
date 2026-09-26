@@ -45,7 +45,7 @@ describe('RegisterPage', () => {
 
     await fillForm()
 
-    expect(await screen.findByRole('heading', { name: 'My account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
     expect(sent).toEqual({
       name: 'Pat Fleet',
       company: 'Fleet LLC',

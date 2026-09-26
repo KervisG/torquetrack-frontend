@@ -20,7 +20,7 @@ describe('DashboardPage', () => {
     renderApp('/admin')
 
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
-    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(await screen.findByText('3')).toBeInTheDocument()
     expect(screen.getByText('$12.50')).toBeInTheDocument()
   })
 
@@ -105,7 +105,7 @@ describe('DashboardPage', () => {
     server.use(authenticatedSession(customerUser), productsOk(), accountOk())
     renderApp('/admin')
 
-    expect(await screen.findByRole('heading', { name: 'My account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument()
   })
 
@@ -141,7 +141,8 @@ describe('DashboardPage', () => {
     renderApp('/admin')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }))
+    await user.click(await screen.findByRole('button', { name: 'Account menu' }))
+    await user.click(screen.getByRole('button', { name: 'Sign out' }))
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })

@@ -60,10 +60,10 @@ describe('QuotesPage', () => {
 
     expect(await screen.findByRole('link', { name: 'Q10002' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Q10001' })).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Status')).toHaveValue('BUILDING')
+    expect(screen.getByRole('tab', { name: 'Building', selected: true })).toBeInTheDocument()
 
     const user = userEvent.setup()
-    await user.selectOptions(screen.getByLabelText('Status'), 'ALL')
+    await user.click(screen.getByRole('tab', { name: 'All' }))
     expect(screen.getByRole('link', { name: 'Q10001' })).toBeInTheDocument()
   })
 
@@ -73,7 +73,7 @@ describe('QuotesPage', () => {
     renderApp('/admin/quotes')
 
     await screen.findByRole('link', { name: 'Q10001' })
-    expect(screen.queryByRole('link', { name: 'New quote' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'New quote' })).not.toBeInTheDocument()
   })
 
   it('shows the API error when the list fails', async () => {

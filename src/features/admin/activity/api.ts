@@ -21,14 +21,26 @@ type RawActivity = {
   createdAt: string
 }
 
-export async function listActivity(): Promise<ActivityEntry[]> {
-  const rows = await apiRequest<RawActivity[]>('/admin/activity')
-  return rows.map((row) => ({
-    id: row.id,
-    actor: row.actorId ?? '',
-    action: row.action,
-    entityType: row.entityType ?? '',
-    entityId: row.entityId ?? '',
-    createdAt: new Date(row.createdAt),
-  }))
+type ActivityPage = {
+  items: ActivityEntry[]
+  nextCursor: number | null
+}
+
+// `before` es el `nextCursor` de la página anterior; sin él llega la primera.
+export async function listActivity(before: number | null): Promise<ActivityPage> {
+  const query = before === null ? '' : `?before=${before}`
+  const page = await apiRequest<{ items: RawActivity[]; nextCursor: number | null }>(
+    `/admin/activity${query}`,
+  )
+  return {
+    items: page.items.map((row) => ({
+      id: row.id,
+      actor: row.actorId ?? '',
+      action: row.action,
+      entityType: row.entityType ?? '',
+      entityId: row.entityId ?? '',
+      createdAt: new Date(row.createdAt),
+    })),
+    nextCursor: page.nextCursor,
+  }
 }

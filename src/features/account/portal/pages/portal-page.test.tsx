@@ -35,7 +35,7 @@ describe('PortalPage', () => {
     server.use(...signedInCustomer(), accountOk())
     renderApp('/account')
 
-    expect(await screen.findByRole('heading', { name: 'My account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
     expect(await screen.findByLabelText('Full name')).toHaveValue('Pat Fleet')
     expect(screen.getByText('pat@example.com')).toBeInTheDocument()
   })
@@ -93,7 +93,7 @@ describe('PortalPage', () => {
     renderApp('/account')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('tab', { name: 'Orders' }))
+    await user.click(await screen.findByRole('link', { name: 'Orders' }))
 
     const row = (await screen.findByText('O10001')).closest('tr')
     expect(row).not.toBeNull()

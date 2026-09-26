@@ -96,28 +96,111 @@ export function productMatchesVinVehicle(product: Product, vehicle: VinVehicle):
   return true
 }
 
+// Parte "Chevrolet / GMC" en marcas sueltas. La lista sale de los productos,
+// así que una marca nueva no hay que registrarla en la pantalla.
+export function catalogBrands(products: Product[]): string[] {
+  const names = new Set<string>()
+  for (const product of products) {
+    for (const part of String(product.make || '').split('/')) {
+      const name = part.trim()
+      if (name) names.add(name)
+    }
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'en'))
+}
+
+// Nombres legibles de las categorías que ya usamos. Una categoría nueva no
+// está aquí: el menú muestra el texto guardado en el producto.
+const CATEGORY_LABELS: Record<string, string> = {
+  TURBO: 'Turbo',
+  INJECTOR: 'Injector',
+  HPFP: 'High-pressure fuel pump',
+  HPOP: 'High-pressure oil pump',
+  'CONTAMINATION KIT': 'Contamination kit',
+  DPF: 'Particulate filter',
+  DOC: 'Oxidation catalyst',
+  EGR: 'EGR valve',
+  'TURBO ACTUATOR': 'Turbo actuator',
+  'FUEL RAIL': 'Fuel rail',
+  SCR: 'DEF system',
+}
+
+export type CatalogCategory = {
+  value: string
+  label: string
+}
+
+export function categoryLabel(category: string): string {
+  const canonical = canonicalCategory(category)
+  return CATEGORY_LABELS[canonical] || category.trim()
+}
+
+// Igual que las marcas: la lista sale de los productos, no de una lista fija.
+export function catalogCategories(products: Product[]): CatalogCategory[] {
+  const byValue = new Map<string, string>()
+  for (const product of products) {
+    const raw = String(product.category || '').trim()
+    if (!raw) continue
+    const value = canonicalCategory(raw)
+    if (!byValue.has(value)) byValue.set(value, categoryLabel(raw))
+  }
+  return [...byValue.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'en'))
+}
+
+// Igual que las marcas: New, Remanufactured o Used salen de lo guardado
+// en el producto. Una condición nueva no hay que registrarla en la pantalla.
+export function catalogConditions(products: Product[]): string[] {
+  const names = new Set<string>()
+  for (const product of products) {
+    const name = String(product.condition || '').trim()
+    if (name) names.add(name)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'en'))
+}
+
+// Vacío no acota. El comprador puede escribir 1,000 o $1,000.
+function priceBound(value: string): number | null {
+  const trimmed = value.replace(/[$,\s]/g, '')
+  if (!trimmed) return null
+  const amount = Number(trimmed)
+  if (!Number.isFinite(amount)) return null
+  return amount
+}
+
 export function filterProducts(
   products: Product[],
   options: {
     brand: string
     category: string
     query: string
+    minPrice: string
+    maxPrice: string
+    condition: string
     vehicle: VinVehicle | null
   },
 ): Product[] {
-  if (!options.brand) return []
-
+  const minPrice = priceBound(options.minPrice)
+  const maxPrice = priceBound(options.maxPrice)
+  // La marca es un filtro. Sin ella la tienda lista el catálogo.
   return products.filter((product) => {
     const categoryMatch =
       options.category === 'All' ||
       canonicalCategory(product.category) === canonicalCategory(options.category)
-    const brandMatch = (product.make || '')
-      .toLowerCase()
-      .includes(options.brand.toLowerCase())
+    const brandMatch =
+      !options.brand ||
+      (product.make || '').toLowerCase().includes(options.brand.toLowerCase())
+    const price = Number(product.price || 0)
+    const priceMatch =
+      (minPrice === null || price >= minPrice) && (maxPrice === null || price <= maxPrice)
+    const conditionMatch =
+      !options.condition ||
+      String(product.condition || '').trim().toLowerCase() === options.condition.toLowerCase()
     const vinMatch = options.vehicle
       ? productMatchesVinVehicle(product, options.vehicle)
       : true
-    if (!categoryMatch || !brandMatch || !vinMatch) return false
+    if (!categoryMatch || !brandMatch || !priceMatch || !conditionMatch || !vinMatch) return false
     if (!options.query) return true
     return [
       product.title,
