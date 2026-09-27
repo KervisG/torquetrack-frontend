@@ -2,7 +2,7 @@ import type { LineItem } from '@/components/line-items-table'
 import type { DocumentTotals } from '@/features/account/portal/types'
 import { apiRequest } from '@/lib/api-client'
 
-import type { AdminOrder, OrderCustomer } from './types'
+import type { AdminOrder, OrderCustomer, OrderRefund } from './types'
 
 type RawRecord = Record<string, unknown>
 
@@ -26,6 +26,15 @@ type RawOrder = {
     source?: string
     createdAt: string
   }>
+  refunds?: RawRefund[]
+  amountRefunded?: number
+  refundableAmount?: number
+}
+
+type RawRefund = Omit<OrderRefund, 'createdAt'> & { createdAt: string }
+
+function toRefund(row: RawRefund): OrderRefund {
+  return { ...row, createdAt: new Date(row.createdAt) }
 }
 
 function text(value: unknown): string {
@@ -96,6 +105,9 @@ function toOrder(row: RawOrder): AdminOrder {
       source: payment.source ?? '',
       createdAt: new Date(payment.createdAt),
     })),
+    refunds: (row.refunds ?? []).map(toRefund),
+    amountRefunded: num(row.amountRefunded),
+    refundableAmount: num(row.refundableAmount),
   }
 }
 
@@ -125,4 +137,16 @@ export function takePayment(id: string): Promise<{ ok: true; url: string }> {
     `/admin/orders/${encodeURIComponent(id)}/take-payment`,
     { method: 'POST' },
   )
+}
+
+// Sin `amount` el backend reembolsa el saldo completo.
+export async function refundOrder(
+  id: string,
+  body: { amount?: number; reason?: string },
+): Promise<OrderRefund> {
+  const row = await apiRequest<RawRefund>(`/admin/orders/${encodeURIComponent(id)}/refunds`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+  return toRefund(row)
 }

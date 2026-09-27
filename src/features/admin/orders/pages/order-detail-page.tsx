@@ -16,8 +16,15 @@ import { formatMoney } from '@/lib/money'
 import { listOrders } from '../api'
 import { OrderStatusForm } from '../components/order-status-form'
 import { PaymentActions } from '../components/payment-actions'
+import { RefundForm } from '../components/refund-form'
 import { adminOrderKeys } from '../query-keys'
-import type { AdminOrder, OrderPayment } from '../types'
+import {
+  CHARGED_PAYMENT_STATUSES,
+  REFUNDABLE_PAYMENT_STATUSES,
+  type AdminOrder,
+  type OrderPayment,
+  type OrderRefund,
+} from '../types'
 
 // La API no tiene un GET por id: el detalle sale del listado (y de su cache).
 export function OrderDetailPage() {
@@ -65,6 +72,11 @@ export function OrderDetailPage() {
 
   const canChangeStatus = can('orders.status')
   const canCancel = can('orders.cancel')
+  const charged = CHARGED_PAYMENT_STATUSES.includes(order.paymentStatus)
+  const canRefund =
+    can('payments.refund') &&
+    REFUNDABLE_PAYMENT_STATUSES.includes(order.paymentStatus) &&
+    order.refundableAmount > 0
 
   return (
     <section className="space-y-6">
@@ -106,13 +118,27 @@ export function OrderDetailPage() {
       <Section title="Payments">
         <PaymentsTable payments={order.payments} />
         <div className="mt-4">
-          {order.paymentStatus === 'PAID' ? (
+          {charged ? (
             <p className="text-sm text-muted-foreground">This order is paid.</p>
           ) : can('payments.take') ? (
             <PaymentActions orderId={order.id} />
           ) : null}
         </div>
       </Section>
+      {charged || order.refunds.length ? (
+        <Section title="Refunds">
+          <RefundsTable refunds={order.refunds} />
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <Detail label="Refunded" value={formatMoney(order.amountRefunded)} />
+            <Detail label="Refundable balance" value={formatMoney(order.refundableAmount)} />
+          </dl>
+          {canRefund ? (
+            <div className="mt-4">
+              <RefundForm orderId={order.id} refundableAmount={order.refundableAmount} />
+            </div>
+          ) : null}
+        </Section>
+      ) : null}
       {canChangeStatus || canCancel ? (
         <Section title="Status">
           <OrderStatusForm
@@ -181,6 +207,41 @@ function PaymentsTable({ payments }: { payments: OrderPayment[] }) {
               <td className="py-2 pr-4">{payment.source || 'Checkout'}</td>
               <td className="py-2 pr-4">{payment.status}</td>
               <td className="py-2 text-right">{formatMoney(payment.amount)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function RefundsTable({ refunds }: { refunds: OrderRefund[] }) {
+  if (!refunds.length) {
+    return <p className="text-sm text-muted-foreground">No refunds yet.</p>
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table aria-label="Refunds" className="w-full text-left text-sm">
+        <thead className="border-b text-muted-foreground">
+          <tr>
+            <th className="py-2 pr-4 font-medium">Date</th>
+            <th className="py-2 pr-4 font-medium">By</th>
+            <th className="py-2 pr-4 font-medium">Reason</th>
+            <th className="py-2 pr-4 font-medium">Status</th>
+            <th className="py-2 text-right font-medium">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {refunds.map((refund) => (
+            <tr key={refund.id} className="border-b last:border-0">
+              <td className="py-2 pr-4">{formatDate(refund.createdAt)}</td>
+              <td className="py-2 pr-4">
+                {refund.createdBy === 'stripe' ? 'Stripe dashboard' : refund.createdBy}
+              </td>
+              <td className="py-2 pr-4">{refund.reason || '—'}</td>
+              <td className="py-2 pr-4">{refund.status}</td>
+              <td className="py-2 text-right">{formatMoney(refund.amount)}</td>
             </tr>
           ))}
         </tbody>

@@ -33,6 +33,21 @@ export type OrderPayment = {
   createdAt: Date
 }
 
+// Estados en los que Stripe ya cobró: un reembolso no reabre el cobro.
+export const CHARGED_PAYMENT_STATUSES = ['PAID', 'PARTIALLY_REFUNDED', 'REFUNDED']
+// Solo desde estos estados el backend acepta un reembolso nuevo.
+export const REFUNDABLE_PAYMENT_STATUSES = ['PAID', 'PARTIALLY_REFUNDED']
+
+export type OrderRefund = {
+  id: string
+  paymentId: string
+  amount: number
+  status: string
+  reason: string
+  createdBy: string
+  createdAt: Date
+}
+
 export type AdminOrder = {
   id: string
   number: string
@@ -48,6 +63,11 @@ export type AdminOrder = {
   vehicle: { vin: string; year: string; make: string; model: string; engine: string }
   quoteNumber: string
   payments: OrderPayment[]
+  refunds: OrderRefund[]
+  // Los dos montos los calcula el backend: el saldo descuenta también los
+  // reembolsos que Stripe todavía no confirmó.
+  amountRefunded: number
+  refundableAmount: number
 }
 
 export function orderCustomerLabel(customer: OrderCustomer): string {
