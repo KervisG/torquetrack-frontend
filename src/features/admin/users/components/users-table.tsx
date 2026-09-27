@@ -79,11 +79,13 @@ export function UsersTable({
                       </Button>
                     </>
                   ) : (
-                    <>
-                      <Button type="button" size="sm" variant="outline" onClick={() => onEdit(user)}>
-                        Edit
-                      </Button>
-                      {user.id !== currentUserId ? (
+                    // El backend no deja cambiar el Role ni el estado de la propia
+                    // cuenta ni borrarla, así que la fila propia no tiene acciones.
+                    user.id !== currentUserId ? (
+                      <>
+                        <Button type="button" size="sm" variant="outline" onClick={() => onEdit(user)}>
+                          Edit
+                        </Button>
                         <Button
                           type="button"
                           size="sm"
@@ -92,8 +94,8 @@ export function UsersTable({
                         >
                           Delete
                         </Button>
-                      ) : null}
-                    </>
+                      </>
+                    ) : null
                   )}
                 </div>
               </td>

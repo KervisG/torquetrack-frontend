@@ -9,7 +9,6 @@ import { PermissionNotice } from '@/features/admin/auth/components/permission-no
 import { hasAdminPermission } from '@/features/admin/auth/types'
 
 import { deleteUser, listRoles, listUsers } from '../api'
-import { CreateUserForm } from '../components/create-user-form'
 import { EditUserForm } from '../components/edit-user-form'
 import { UsersTable } from '../components/users-table'
 import { adminUserKeys } from '../query-keys'
@@ -38,7 +37,10 @@ export function UsersPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader title="Users" description="Accounts that can sign in and the role each one holds." />
+      <PageHeader
+        title="Users"
+        description="Accounts register as customers in the store; assign a role here to grant panel access."
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">All accounts</CardTitle>
@@ -58,6 +60,7 @@ export function UsersPage() {
             />
           )}
           <FormError error={remove.error} />
+          {roles.error ? <FormError error={roles.error} /> : null}
           {editing ? (
             <EditUserForm
               key={editing.id}
@@ -66,18 +69,6 @@ export function UsersPage() {
               onClose={() => setEditingId(null)}
             />
           ) : null}
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Create user</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {roles.error ? (
-            <FormError error={roles.error} />
-          ) : (
-            <CreateUserForm roles={roles.data ?? []} />
-          )}
         </CardContent>
       </Card>
     </section>

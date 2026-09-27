@@ -1,5 +1,4 @@
 import { apiRequest } from '@/lib/api-client'
-import type { CreateUserValues } from '@/lib/validators/admin-user'
 
 import type { AdminRole, AdminUser } from './types'
 
@@ -14,17 +13,11 @@ export function listRoles(): Promise<AdminRole[]> {
   return apiRequest<AdminRole[]>('/admin/roles')
 }
 
-export function createUser(values: CreateUserValues): Promise<{ ok: true }> {
-  return apiRequest<{ ok: true }>('/admin/users', {
-    method: 'POST',
-    body: JSON.stringify(values),
-  })
-}
-
-// `role: null` quita el acceso al panel; la cuenta queda como cliente.
+// `role: null` quita el acceso al panel; la cuenta queda como cliente. El
+// backend rechaza con 400 cualquier otro campo.
 export function updateUser(
   id: string,
-  patch: { role: string | null; active: boolean; password?: string },
+  patch: { role: string | null; active: boolean },
 ): Promise<{ ok: true }> {
   return apiRequest<{ ok: true }>(`/admin/users/${encodeURIComponent(id)}`, {
     method: 'PUT',

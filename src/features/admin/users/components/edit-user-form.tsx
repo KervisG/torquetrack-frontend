@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 
 import { FormError } from '@/components/form-error'
-import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
 import { editUserSchema, type EditUserValues } from '@/lib/validators/admin-user'
 
@@ -22,19 +21,12 @@ export function EditUserForm({ user, roles, onClose }: EditUserFormProps) {
   const queryClient = useQueryClient()
   const form = useForm<EditUserValues>({
     resolver: zodResolver(editUserSchema),
-    defaultValues: { role: user.role?.slug ?? '', active: user.active, password: '' },
+    defaultValues: { role: user.role?.slug ?? '', active: user.active },
   })
   const save = useMutation({
-    mutationFn: ({ role, active, password }: EditUserValues) =>
-      updateUser(user.id, {
-        role: role || null,
-        active,
-        // Una contraseña vacía no se manda: el backend la tomaría como "sin cambio"
-        // igual, pero así el request deja claro qué se está editando.
-        ...(password ? { password } : {}),
-      }),
+    mutationFn: ({ role, active }: EditUserValues) =>
+      updateUser(user.id, { role: role || null, active }),
     onSuccess: async () => {
-      form.setValue('password', '')
       await queryClient.invalidateQueries({ queryKey: adminUserKeys.list() })
     },
   })
@@ -53,13 +45,6 @@ export function EditUserForm({ user, roles, onClose }: EditUserFormProps) {
           roles={roles}
           emptyLabel="Customer (no panel access)"
           {...form.register('role')}
-        />
-        <FormField
-          id={`edit-password-${user.id}`}
-          label="New password (optional)"
-          type="password"
-          autoComplete="new-password"
-          {...form.register('password')}
         />
       </div>
       <label className="flex items-center gap-2 text-sm">
