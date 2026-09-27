@@ -61,6 +61,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
       onSignOut={() => signOut.mutate()}
       signingOut={signOut.isPending}
       signOutError={signOut.error}
+      wide
     >
       {children}
     </AppShell>

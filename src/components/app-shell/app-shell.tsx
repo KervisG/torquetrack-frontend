@@ -20,6 +20,9 @@ type AppShellProps = {
   signingOut: boolean
   signOutError: unknown
   children: ReactNode
+  // El panel usa todo el ancho junto a la barra: las tablas quedan pegadas
+  // a la izquierda. El portal sigue en `max-w-6xl`.
+  wide?: boolean
 }
 
 // Layout del panel y del portal: barra lateral fija en escritorio y cajón en
@@ -35,6 +38,7 @@ export function AppShell({
   signingOut,
   signOutError,
   children,
+  wide = false,
 }: AppShellProps) {
   const { collapsed, toggle } = useSidebarCollapsed()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -112,7 +116,14 @@ export function AppShell({
             <FormError error={signOutError} />
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 focus:outline-none md:px-8 md:py-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={cn(
+            'w-full flex-1 px-4 py-6 focus:outline-none md:px-8 md:py-8',
+            wide ? 'max-w-none' : 'mx-auto max-w-6xl',
+          )}
+        >
           {children}
         </main>
       </div>
