@@ -74,6 +74,14 @@ export function deactivateAdminProduct(id: string): Promise<{ ok: true }> {
   return apiRequest(`/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
+// Solo `active`: el backend conserva precio y el resto del registro guardado.
+export function activateAdminProduct(id: string): Promise<{ ok: true }> {
+  return apiRequest(`/admin/products/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ active: true }),
+  })
+}
+
 export function productPayload(
   existing: AdminProduct | undefined,
   values: AdminProductValues,

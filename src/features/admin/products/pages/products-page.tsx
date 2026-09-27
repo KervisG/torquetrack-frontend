@@ -6,13 +6,20 @@ import { FormField } from '@/components/form-field'
 import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
 import type { AdminProductValues } from '@/lib/validators/admin-product'
 
-import { deactivateAdminProduct, listAdminProducts, productPayload, saveAdminProduct } from '../api'
+import {
+  activateAdminProduct,
+  deactivateAdminProduct,
+  listAdminProducts,
+  productPayload,
+  saveAdminProduct,
+} from '../api'
 import { ProductEditorDialog } from '../components/product-editor-dialog'
+import { ProductLayoutToggle, type ProductLayout } from '../components/product-layout-toggle'
+import { ProductsCardGrid } from '../components/products-card-grid'
 import { ProductsTable } from '../components/products-table'
 import { adminProductKeys } from '../query-keys'
 import type { AdminProduct } from '../types'
@@ -43,6 +50,7 @@ export function ProductsPage() {
   const canViewCosts = can('costs.view')
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
+  const [layout, setLayout] = useState<ProductLayout>('list')
   const [editing, setEditing] = useState<AdminProduct | null | undefined>(undefined)
   const products = useQuery({
     queryKey: adminProductKeys.list(),
@@ -68,11 +76,22 @@ export function ProductsPage() {
       await queryClient.invalidateQueries({ queryKey: adminProductKeys.all })
     },
   })
+  const activate = useMutation({
+    mutationFn: (product: AdminProduct) => activateAdminProduct(product.id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminProductKeys.all })
+    },
+  })
   const rows = useMemo(
     () => (products.data ?? []).filter((product) => matches(product, search)),
     [products.data, search],
   )
   const paged = usePagedRows(rows, search)
+
+  function openEditor(product: AdminProduct) {
+    save.reset()
+    setEditing(product)
+  }
 
   if (!allowed) {
     return (
@@ -93,44 +112,59 @@ export function ProductsPage() {
           ) : null
         }
       />
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <FormField
-            id="product-search"
-            label="Search products"
-            placeholder="Title, part number, category or make"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          {products.isPending ? (
-            <p className="text-sm text-muted-foreground">Loading products…</p>
-          ) : products.error ? (
-            <FormError error={products.error} />
-          ) : (
-            <>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <FormField
+              id="product-search"
+              label="Search products"
+              placeholder="Title, part number, category or make"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+          <ProductLayoutToggle layout={layout} onChange={setLayout} />
+        </div>
+        {products.isPending ? (
+          <p className="text-sm text-muted-foreground">Loading products…</p>
+        ) : products.error ? (
+          <FormError error={products.error} />
+        ) : (
+          <>
+            {layout === 'list' ? (
               <ProductsTable
                 products={paged.items}
                 canEdit={canEdit}
                 deactivatingId={deactivate.isPending ? (deactivate.variables?.id ?? null) : null}
-                onEdit={(product) => {
-                  save.reset()
-                  setEditing(product)
-                }}
+                activatingId={activate.isPending ? (activate.variables?.id ?? null) : null}
+                onEdit={openEditor}
                 onDeactivate={(product) => deactivate.mutate(product)}
+                onActivate={(product) => activate.mutate(product)}
               />
-              <ListPagination
-                page={paged.page}
-                pageCount={paged.pageCount}
-                total={paged.total}
-                from={paged.from}
-                to={paged.to}
-                onPage={paged.setPage}
+            ) : (
+              <ProductsCardGrid
+                products={paged.items}
+                canEdit={canEdit}
+                deactivatingId={deactivate.isPending ? (deactivate.variables?.id ?? null) : null}
+                activatingId={activate.isPending ? (activate.variables?.id ?? null) : null}
+                onEdit={openEditor}
+                onDeactivate={(product) => deactivate.mutate(product)}
+                onActivate={(product) => activate.mutate(product)}
               />
-            </>
-          )}
-          {deactivate.error ? <FormError error={deactivate.error} /> : null}
-        </CardContent>
-      </Card>
+            )}
+            <ListPagination
+              page={paged.page}
+              pageCount={paged.pageCount}
+              total={paged.total}
+              from={paged.from}
+              to={paged.to}
+              onPage={paged.setPage}
+            />
+          </>
+        )}
+        {deactivate.error ? <FormError error={deactivate.error} /> : null}
+        {activate.error ? <FormError error={activate.error} /> : null}
+      </div>
       {editing !== undefined ? (
         <ProductEditorDialog
           key={editing?.id ?? 'new'}
