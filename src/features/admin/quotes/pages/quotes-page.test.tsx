@@ -53,6 +53,27 @@ describe('QuotesPage', () => {
     expect(row.getByText('ACTIVE')).toBeInTheDocument()
   })
 
+  it('switches the same quotes between a table and icons', async () => {
+    const backend = quotesBackend([quoteRow({}), building])
+    server.use(authenticatedSession(), ...backend.handlers)
+    renderApp('/admin/quotes')
+
+    const user = userEvent.setup()
+    await screen.findByRole('table', { name: 'Quotes' })
+    await user.click(screen.getByRole('button', { name: 'Icons' }))
+
+    expect(screen.queryByRole('table', { name: 'Quotes' })).not.toBeInTheDocument()
+    const icons = screen.getByRole('list', { name: 'Quotes' })
+    expect(within(icons).getByRole('link', { name: 'Q10002' })).toHaveAttribute(
+      'href',
+      '/admin/quotes/QID2',
+    )
+    expect(within(icons).getByText('Lee Guest')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Table' }))
+    expect(screen.getByRole('table', { name: 'Quotes' })).toBeInTheDocument()
+  })
+
   it('starts filtered by the status in the URL', async () => {
     const backend = quotesBackend([quoteRow({}), building])
     server.use(authenticatedSession(), ...backend.handlers)

@@ -7,12 +7,13 @@ import { FormField } from '@/components/form-field'
 import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
 
 import { listQuotes } from '../api'
 import { QuoteEditorDialog } from '../components/quote-editor-dialog'
+import { QuoteLayoutToggle, type QuoteLayout } from '../components/quote-layout-toggle'
+import { QuotesIconGrid } from '../components/quotes-icon-grid'
 import { QuotesTable } from '../components/quotes-table'
 import { adminQuoteKeys } from '../query-keys'
 import type { AdminQuote } from '../types'
@@ -52,6 +53,7 @@ export function QuotesPage() {
   const status = params.get('status')?.toUpperCase() || 'ALL'
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
+  const [layout, setLayout] = useState<QuoteLayout>('table')
   const quotes = useQuery({
     queryKey: adminQuoteKeys.list(),
     queryFn: listQuotes,
@@ -81,8 +83,7 @@ export function QuotesPage() {
       {can('quotes.create') ? (
         <QuoteEditorDialog open={creating} onOpenChange={setCreating} />
       ) : null}
-      <Card>
-        <CardContent className="space-y-4 pt-6">
+      <div className="space-y-4">
           <div role="tablist" aria-label="Status" className="flex flex-wrap gap-2">
             {STATUS_TABS.map((tab) => (
               <Button
@@ -90,7 +91,7 @@ export function QuotesPage() {
                 type="button"
                 role="tab"
                 size="sm"
-                variant={status === tab.value ? 'default' : 'outline'}
+                variant={status === tab.value ? 'default' : 'ghost'}
                 aria-selected={status === tab.value}
                 onClick={() => setParams(tab.value === 'ALL' ? {} : { status: tab.value }, { replace: true })}
               >
@@ -98,20 +99,29 @@ export function QuotesPage() {
               </Button>
             ))}
           </div>
-          <FormField
-            id="quote-search"
-            label="Search quotes"
-            placeholder="Number, customer, VIN or part"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <FormField
+                id="quote-search"
+                label="Search quotes"
+                placeholder="Number, customer, VIN or part"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+            <QuoteLayoutToggle layout={layout} onChange={setLayout} />
+          </div>
           {quotes.isPending ? (
             <p className="text-sm text-muted-foreground">Loading quotes…</p>
           ) : quotes.error ? (
             <FormError error={quotes.error} />
           ) : (
             <>
-              <QuotesTable quotes={paged.items} />
+              {layout === 'table' ? (
+                <QuotesTable quotes={paged.items} />
+              ) : (
+                <QuotesIconGrid quotes={paged.items} />
+              )}
               <ListPagination
                 page={paged.page}
                 pageCount={paged.pageCount}
@@ -122,8 +132,7 @@ export function QuotesPage() {
               />
             </>
           )}
-        </CardContent>
-      </Card>
+      </div>
     </section>
   )
 }
