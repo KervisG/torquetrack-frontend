@@ -9,6 +9,7 @@ import { CustomerDetailPage } from '@/features/admin/customers/pages/customer-de
 import { CustomersPage } from '@/features/admin/customers/pages/customers-page'
 import { DashboardPage } from '@/features/admin/dashboard/pages/dashboard-page'
 import { OrderDetailPage } from '@/features/admin/orders/pages/order-detail-page'
+import { CartDetailPage } from '@/features/admin/carts/pages/cart-detail-page'
 import { CartsPage } from '@/features/admin/carts/pages/carts-page'
 import { OrdersPage } from '@/features/admin/orders/pages/orders-page'
 import { ProductsPage } from '@/features/admin/products/pages/products-page'
@@ -30,6 +31,7 @@ const lazyPages: [string, ComponentType][] = [
   ['/admin/orders', OrdersPage],
   ['/admin/products', ProductsPage],
   ['/admin/carts', CartsPage],
+  ['/admin/carts/C1', CartDetailPage],
   ['/admin/orders/O1', OrderDetailPage],
   ['/admin/quotes', QuotesPage],
   ['/admin/quotes/new', QuoteEditorPage],

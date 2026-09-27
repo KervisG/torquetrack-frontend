@@ -3,6 +3,8 @@ export type AdminCartItem = {
   title: string
   partNumber: string
   quantity: number
+  // Referencia guardada al agregar el producto. No es el precio que se cobra.
+  priceAtAdd?: number
 }
 
 export type AdminCart = {

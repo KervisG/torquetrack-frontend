@@ -8,11 +8,13 @@ function text(value: unknown): string {
 
 function toItem(item: Record<string, unknown>): AdminCartItem {
   const quantity = Number(item.quantity ?? item.qty)
+  const price = Number(item.priceAtAdd)
   return {
     id: text(item.id ?? item.productId),
     title: text(item.title),
     partNumber: text(item.partNumber),
     quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+    priceAtAdd: Number.isFinite(price) && price > 0 ? price : undefined,
   }
 }
 

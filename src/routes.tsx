@@ -86,6 +86,7 @@ export const appRoutes = [
       { path: 'orders/:id', ...lazyPage(() => import('@/features/admin/orders/pages/order-detail-page'), 'OrderDetailPage') },
       { path: 'products', ...lazyPage(() => import('@/features/admin/products/pages/products-page'), 'ProductsPage') },
       { path: 'carts', ...lazyPage(() => import('@/features/admin/carts/pages/carts-page'), 'CartsPage') },
+      { path: 'carts/:id', ...lazyPage(() => import('@/features/admin/carts/pages/cart-detail-page'), 'CartDetailPage') },
       { path: 'quotes', ...lazyPage(() => import('@/features/admin/quotes/pages/quotes-page'), 'QuotesPage') },
       { path: 'quotes/new', ...lazyPage(() => import('@/features/admin/quotes/pages/quote-editor-page'), 'QuoteEditorPage') },
       { path: 'quotes/:id', ...lazyPage(() => import('@/features/admin/quotes/pages/quote-detail-page'), 'QuoteDetailPage') },
