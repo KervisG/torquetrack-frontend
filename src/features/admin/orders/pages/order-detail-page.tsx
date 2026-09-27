@@ -7,21 +7,23 @@ import { LineItemsTable } from '@/components/line-items-table'
 import { TotalsSummary } from '@/components/totals-summary'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
 import { formatDate } from '@/lib/format-date'
 import { formatMoney } from '@/lib/money'
 
 import { listOrders } from '../api'
+import { CustomerDetails } from '../components/customer-details'
 import { FulfillmentPanel } from '../components/fulfillment-panel'
 import { OrderStatusForm } from '../components/order-status-form'
+import { OrderWizard } from '../components/order-wizard'
 import { PaymentActions } from '../components/payment-actions'
 import { RefundForm } from '../components/refund-form'
 import { adminOrderKeys } from '../query-keys'
 import {
   CHARGED_PAYMENT_STATUSES,
   REFUNDABLE_PAYMENT_STATUSES,
+  orderCustomerLabel,
   type AdminOrder,
   type OrderPayment,
   type OrderRefund,
@@ -94,65 +96,103 @@ export function OrderDetailPage() {
         }
         description={
           <>
-            Placed {formatDate(order.createdAt)}
+            {orderCustomerLabel(order.customer)}
+            {' · Placed '}
+            {formatDate(order.createdAt)}
             {order.quoteNumber ? ` · From quote ${order.quoteNumber}` : ''}
           </>
         }
       />
-      <div className="grid gap-6 md:grid-cols-2">
-        <Section title="Customer">
-          <CustomerDetails order={order} />
-        </Section>
-        <Section title="Shipping & vehicle">
-          <dl className="space-y-3 text-sm">
-            <Detail label="Shipping method" value={order.shippingMethod} />
-            <Detail label="Vehicle" value={vehicleLabel(order)} />
-          </dl>
-        </Section>
-      </div>
-      <Section title="Fulfillment">
-        <FulfillmentPanel order={order} canUpdate={canChangeStatus} />
-      </Section>
-      <Section title="Items">
-        <LineItemsTable items={order.items} />
-        <div className="ml-auto mt-4 max-w-xs">
-          <TotalsSummary totals={order.totals} />
-        </div>
-      </Section>
-      <Section title="Payments">
-        <PaymentsTable payments={order.payments} />
-        <div className="mt-4">
-          {charged ? (
-            <p className="text-sm text-muted-foreground">This order is paid.</p>
-          ) : can('payments.take') ? (
-            <PaymentActions orderId={order.id} />
-          ) : null}
-        </div>
-      </Section>
-      {charged || order.refunds.length ? (
-        <Section title="Refunds">
-          <RefundsTable refunds={order.refunds} />
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-            <Detail label="Refunded" value={formatMoney(order.amountRefunded)} />
-            <Detail label="Refundable balance" value={formatMoney(order.refundableAmount)} />
-          </dl>
-          {canRefund ? (
-            <div className="mt-4">
-              <RefundForm orderId={order.id} refundableAmount={order.refundableAmount} />
-            </div>
-          ) : null}
-        </Section>
-      ) : null}
-      {canChangeStatus || canCancel ? (
-        <Section title="Status">
-          <OrderStatusForm
-            orderId={order.id}
-            status={order.status}
-            canChange={canChangeStatus}
-            canCancel={canCancel}
-          />
-        </Section>
-      ) : null}
+      <OrderWizard
+        steps={[
+          {
+            id: 'review',
+            label: 'Review',
+            content: (
+              <div className="space-y-4">
+                <div className="grid items-start gap-4 md:grid-cols-2">
+                  <Section title="Customer">
+                    <CustomerDetails customer={order.customer} />
+                  </Section>
+                  <Section title="Shipping & vehicle">
+                    <dl className="space-y-3 text-sm">
+                      <Detail label="Shipping method" value={order.shippingMethod} />
+                      <Detail label="Vehicle" value={vehicleLabel(order)} />
+                    </dl>
+                  </Section>
+                </div>
+                <Section title="Items">
+                  <LineItemsTable items={order.items} />
+                  <div className="ml-auto mt-4 max-w-xs">
+                    <TotalsSummary totals={order.totals} />
+                  </div>
+                </Section>
+              </div>
+            ),
+          },
+          {
+            id: 'payment',
+            label: 'Payment',
+            content: (
+              <div className="space-y-6">
+                <Section title="Payments">
+                  <PaymentsTable payments={order.payments} />
+                  <div className="mt-4">
+                    {charged ? (
+                      <p className="text-sm text-muted-foreground">This order is paid.</p>
+                    ) : can('payments.take') ? (
+                      <PaymentActions orderId={order.id} />
+                    ) : null}
+                  </div>
+                </Section>
+                {charged || order.refunds.length ? (
+                  <Section title="Refunds">
+                    <RefundsTable refunds={order.refunds} />
+                    <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                      <Detail label="Refunded" value={formatMoney(order.amountRefunded)} />
+                      <Detail label="Refundable balance" value={formatMoney(order.refundableAmount)} />
+                    </dl>
+                    {canRefund ? (
+                      <div className="mt-4">
+                        <RefundForm orderId={order.id} refundableAmount={order.refundableAmount} />
+                      </div>
+                    ) : null}
+                  </Section>
+                ) : null}
+              </div>
+            ),
+          },
+          {
+            id: 'fulfillment',
+            label: 'Fulfillment',
+            content: (
+              <Section title="Fulfillment">
+                <FulfillmentPanel order={order} canUpdate={canChangeStatus} />
+              </Section>
+            ),
+          },
+          {
+            id: 'status',
+            label: 'Status',
+            content: (
+              <Section title="Status">
+                {canChangeStatus || canCancel ? (
+                  <OrderStatusForm
+                    orderId={order.id}
+                    status={order.status}
+                    canChange={canChangeStatus}
+                    canCancel={canCancel}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    You do not have permission to change this order.
+                  </p>
+                )}
+              </Section>
+            ),
+          },
+        ]}
+      />
     </section>
   )
 }
@@ -161,29 +201,6 @@ function vehicleLabel(order: AdminOrder): string {
   const { year, make, model, engine, vin } = order.vehicle
   const name = [year, make, model, engine].filter(Boolean).join(' ')
   return [name, vin ? `VIN ${vin}` : ''].filter(Boolean).join(' · ')
-}
-
-function CustomerDetails({ order }: { order: AdminOrder }) {
-  const { customer } = order
-  const address = [
-    customer.address1,
-    customer.address2,
-    [customer.city, customer.state, customer.zip].filter(Boolean).join(' '),
-  ]
-    .filter(Boolean)
-    .join(', ')
-
-  return (
-    <dl className="grid gap-3 text-sm sm:grid-cols-2">
-      <Detail label="Name" value={customer.name} />
-      <Detail label="Company" value={customer.company} />
-      <Detail label="Email" value={customer.email} />
-      <Detail label="Phone" value={customer.phone} />
-      <div className="sm:col-span-2">
-        <Detail label="Address" value={address} />
-      </div>
-    </dl>
-  )
 }
 
 function PaymentsTable({ payments }: { payments: OrderPayment[] }) {
@@ -256,12 +273,10 @@ function RefundsTable({ refunds }: { refunds: OrderRefund[] }) {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
+    <section className="rounded-lg border border-foreground/15 bg-background p-5">
+      <h2 className="text-base font-semibold">{title}</h2>
+      <div className="mt-4">{children}</div>
+    </section>
   )
 }
 

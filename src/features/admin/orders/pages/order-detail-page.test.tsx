@@ -37,6 +37,8 @@ describe('OrderDetailPage', () => {
     expect(totals.getByText('$27.10')).toBeInTheDocument()
     expect(totals.getAllByText('$475.58')).toHaveLength(1)
 
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Payment' }))
     const payments = within(screen.getByRole('table', { name: 'Payments' }))
     expect(payments.getByText('PENDING')).toBeInTheDocument()
     expect(payments.getByText('$475.58')).toBeInTheDocument()
@@ -48,7 +50,8 @@ describe('OrderDetailPage', () => {
     renderApp('/admin/orders/OID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Create payment link' }))
+    await user.click(await screen.findByRole('button', { name: 'Payment' }))
+    await user.click(screen.getByRole('button', { name: 'Create payment link' }))
 
     expect(await screen.findByLabelText('Payment link')).toHaveValue(
       'https://checkout.stripe.com/pay/cs_link',
@@ -68,7 +71,8 @@ describe('OrderDetailPage', () => {
     renderApp('/admin/orders/OID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Take payment' }))
+    await user.click(await screen.findByRole('button', { name: 'Payment' }))
+    await user.click(screen.getByRole('button', { name: 'Take payment' }))
 
     expect(
       await screen.findByRole('link', { name: 'Open secure payment page' }),
@@ -87,7 +91,8 @@ describe('OrderDetailPage', () => {
     renderApp('/admin/orders/OID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Take payment' }))
+    await user.click(await screen.findByRole('button', { name: 'Payment' }))
+    await user.click(screen.getByRole('button', { name: 'Take payment' }))
 
     expect(await screen.findByText('Stripe is not configured')).toBeInTheDocument()
   })
@@ -98,6 +103,8 @@ describe('OrderDetailPage', () => {
     renderApp('/admin/orders/OID1')
 
     expect(await screen.findByRole('heading', { name: 'Order O10001' })).toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Payment' }))
     expect(screen.queryByRole('button', { name: 'Take payment' })).not.toBeInTheDocument()
     expect(screen.getByText('This order is paid.')).toBeInTheDocument()
   })
@@ -108,7 +115,10 @@ describe('OrderDetailPage', () => {
     renderApp('/admin/orders/OID1')
 
     expect(await screen.findByRole('heading', { name: 'Order O10001' })).toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Payment' }))
     expect(screen.queryByRole('button', { name: 'Take payment' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Status' }))
     expect(screen.queryByRole('button', { name: 'Update status' })).not.toBeInTheDocument()
   })
 
@@ -118,7 +128,8 @@ describe('OrderDetailPage', () => {
     renderApp('/admin/orders/OID1')
 
     const user = userEvent.setup()
-    await user.selectOptions(await screen.findByLabelText('Order status'), 'PROCESSING')
+    await user.click(await screen.findByRole('button', { name: 'Status' }))
+    await user.selectOptions(screen.getByLabelText('Order status'), 'PROCESSING')
     await user.click(screen.getByRole('button', { name: 'Update status' }))
 
     expect(await screen.findByText('Status updated.')).toBeInTheDocument()
@@ -134,7 +145,9 @@ describe('OrderDetailPage', () => {
     server.use(staffWith(['orders.view', 'orders.status']), ...backend.handlers)
     renderApp('/admin/orders/OID1')
 
-    const select = await screen.findByLabelText('Order status')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Status' }))
+    const select = screen.getByLabelText('Order status')
     expect(within(select).queryByRole('option', { name: 'CANCELLED' })).not.toBeInTheDocument()
     expect(within(select).queryByRole('option', { name: 'COMPLETED' })).not.toBeInTheDocument()
     expect(within(select).getByRole('option', { name: 'REJECTED' })).toBeInTheDocument()

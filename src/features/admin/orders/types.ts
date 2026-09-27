@@ -112,3 +112,13 @@ export function canFulfill(order: AdminOrder): boolean {
 export function orderCustomerLabel(customer: OrderCustomer): string {
   return customer.name || customer.company || customer.email || 'Customer'
 }
+
+export function customerAddress(customer: OrderCustomer): string {
+  return [
+    customer.address1,
+    customer.address2,
+    [customer.city, customer.state, customer.zip].filter(Boolean).join(' '),
+  ]
+    .filter(Boolean)
+    .join(', ')
+}

@@ -14,46 +14,57 @@ export function OrdersTable({ orders }: { orders: AdminOrder[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto rounded-lg border border-foreground/15 bg-background">
       <table aria-label="Orders" className="w-full text-left text-sm">
         <thead className="border-b text-muted-foreground">
           <tr>
-            <th className="py-2 pr-4 font-medium">Number</th>
-            <th className="py-2 pr-4 font-medium">Customer</th>
-            <th className="py-2 pr-4 text-right font-medium">Total</th>
-            <th className="py-2 pr-4 font-medium">Payment</th>
-            <th className="py-2 pr-4 font-medium">Status</th>
-            <th className="py-2 pr-4 font-medium">Fulfillment</th>
-            <th className="py-2 font-medium">Date</th>
+            <th className="px-4 py-3 font-medium">Number</th>
+            <th className="px-4 py-3 font-medium">Customer</th>
+            <th className="px-4 py-3 text-right font-medium">Total</th>
+            <th className="px-4 py-3 font-medium">Payment</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Fulfillment</th>
+            <th className="px-4 py-3 font-medium">Date</th>
           </tr>
         </thead>
         <tbody>
-          {orders.map((order) => (
-            <tr key={order.id} className="border-b last:border-0">
-              <td className="py-2 pr-4">
+          {orders.map((order) => {
+            const name = orderCustomerLabel(order.customer)
+            const email = order.customer.email.trim()
+            return (
+              // El enlace cubre la fila para que cualquier celda abra el pedido,
+              // y el nombre accesible sigue siendo solo el número.
+              <tr key={order.id} className="group relative border-b border-border/60 last:border-0 hover:bg-muted/50">
+              <td className="px-4 py-4">
                 <Link
                   to={`/admin/orders/${encodeURIComponent(order.id)}`}
-                  className="font-medium underline-offset-4 hover:underline"
+                  className="font-medium after:absolute after:inset-0 after:content-[''] group-hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   {order.number}
                 </Link>
               </td>
-              <td className="py-2 pr-4">{orderCustomerLabel(order.customer)}</td>
-              <td className="py-2 pr-4 text-right">{formatMoney(order.totals.total)}</td>
-              <td className="py-2 pr-4">
+              <td className="px-4 py-4">
+                <p>{name}</p>
+                {email && email.toLowerCase() !== name.toLowerCase() ? (
+                  <p className="text-muted-foreground">{email}</p>
+                ) : null}
+              </td>
+              <td className="px-4 py-4 text-right">{formatMoney(order.totals.total)}</td>
+              <td className="px-4 py-4">
                 <Badge variant={order.paymentStatus === 'PAID' ? 'secondary' : 'outline'}>
                   {order.paymentStatus}
                 </Badge>
               </td>
-              <td className="py-2 pr-4">{order.status}</td>
-              <td className="py-2 pr-4">
+              <td className="px-4 py-4">{order.status}</td>
+              <td className="px-4 py-4">
                 <Badge variant={fulfillmentBadgeVariant(order.fulfillmentStatus)}>
                   {fulfillmentLabel(order.fulfillmentStatus)}
                 </Badge>
               </td>
-              <td className="py-2">{formatDate(order.createdAt)}</td>
+              <td className="px-4 py-4">{formatDate(order.createdAt)}</td>
             </tr>
-          ))}
+            )
+          })}
         </tbody>
       </table>
     </div>
