@@ -1,3 +1,5 @@
+import type { FulfillmentStatus } from '@/lib/fulfillment'
+
 export type AccountProfile = {
   id: string
   email: string | null
@@ -28,6 +30,13 @@ export type AccountOrder = {
   paymentStatus: string
   createdAt: Date
   totals: DocumentTotals
+  fulfillmentStatus: FulfillmentStatus
+  carrier: string
+  trackingNumber: string
+  // Lo arma el backend según el transportista; `null` sin enlace público.
+  trackingUrl: string | null
+  shippedAt: Date | null
+  deliveredAt: Date | null
 }
 
 export type AccountQuote = {

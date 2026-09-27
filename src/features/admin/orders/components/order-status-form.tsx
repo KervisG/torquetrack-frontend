@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 
 import { updateOrderStatus } from '../api'
 import { adminOrderKeys } from '../query-keys'
-import { ORDER_STATUSES } from '../types'
+import { ORDER_STATUSES, nextOrderStatuses } from '../types'
 
 type OrderStatusFormProps = {
   orderId: string
@@ -17,7 +17,7 @@ type OrderStatusFormProps = {
 }
 
 // El backend exige `orders.cancel` para CANCELLED y `orders.status` para el
-// resto; se ofrecen solo los estados que el rol puede fijar.
+// resto, y solo acepta el paso siguiente (`nextOrderStatuses`).
 export function OrderStatusForm({ orderId, status, canChange, canCancel }: OrderStatusFormProps) {
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState(status)
@@ -25,12 +25,11 @@ export function OrderStatusForm({ orderId, status, canChange, canCancel }: Order
     mutationFn: (next: string) => updateOrderStatus(orderId, next),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminOrderKeys.all }),
   })
-  const allowed = ORDER_STATUSES.filter((value) =>
+  const allowed = nextOrderStatuses(status).filter((value) =>
     value === 'CANCELLED' ? canCancel : canChange,
   )
-  const values: string[] = allowed.includes(status as (typeof ORDER_STATUSES)[number])
-    ? [...allowed]
-    : [status, ...allowed]
+  const known = (ORDER_STATUSES as readonly string[]).includes(status)
+  const values = known ? [status, ...allowed.filter((value) => value !== status)] : [status]
 
   return (
     <form

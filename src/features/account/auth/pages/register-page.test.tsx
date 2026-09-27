@@ -3,9 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
-import { customerUser, unauthorizedSession } from '@/test/admin-handlers'
-import { accountOk } from '@/test/account-handlers'
-import { productsOk } from '@/test/catalog-handlers'
+import { unauthorizedSession } from '@/test/admin-handlers'
 import { server } from '@/test/msw-server'
 import { renderApp } from '@/test/render-app'
 
@@ -21,31 +19,25 @@ async function fillForm(overrides: { confirm?: string } = {}) {
 }
 
 describe('RegisterPage', () => {
-  it('creates the account and opens the portal', async () => {
-    let authenticated = false
+  it('creates the account and asks to verify the email without assuming a session', async () => {
     let sent: Record<string, string> | undefined
     server.use(
-      http.get('/api/session/', () =>
-        authenticated
-          ? HttpResponse.json({ authenticated: true, user: customerUser, csrfToken: 't' })
-          : HttpResponse.json({ error: 'Unauthorized', csrfToken: 't' }, { status: 401 }),
-      ),
+      unauthorizedSession(),
       http.post('/api/register/', async ({ request }) => {
         sent = (await request.json()) as Record<string, string>
-        authenticated = true
         return HttpResponse.json(
-          { authenticated: true, user: customerUser, csrfToken: 't2' },
+          { ok: true, message: 'Check your email to verify your account.' },
           { status: 201 },
         )
       }),
-      accountOk(),
-      productsOk(),
     )
     renderApp('/register')
 
     await fillForm()
 
-    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
+    expect(await screen.findByText('Check your email to verify your account.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'sign in' })).toHaveAttribute('href', '/login')
+    expect(screen.queryByRole('heading', { name: 'Profile' })).not.toBeInTheDocument()
     expect(sent).toEqual({
       name: 'Pat Fleet',
       company: 'Fleet LLC',
@@ -53,20 +45,6 @@ describe('RegisterPage', () => {
       email: 'pat@example.com',
       password: 'diesel-pass-123',
     })
-  })
-
-  it('shows the 409 error when the email already has an account', async () => {
-    server.use(
-      unauthorizedSession(),
-      http.post('/api/register/', () =>
-        HttpResponse.json({ error: 'Email already exists' }, { status: 409 }),
-      ),
-    )
-    renderApp('/register')
-
-    await fillForm()
-
-    expect(await screen.findByText('Email already exists')).toBeInTheDocument()
   })
 
   it('shows the 400 error from the password validators', async () => {

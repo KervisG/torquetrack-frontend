@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { SelectField } from '@/components/select-field'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -54,6 +55,9 @@ export function CustomersPage() {
     },
   })
 
+  const rows = customers.data?.filter((customer) => matches(customer, search, taxStatus)) ?? []
+  const paged = usePagedRows(rows, `${search}|${taxStatus}`)
+
   if (!allowed) {
     return (
       <PermissionNotice
@@ -62,8 +66,6 @@ export function CustomersPage() {
       />
     )
   }
-
-  const rows = customers.data?.filter((customer) => matches(customer, search, taxStatus)) ?? []
 
   return (
     <section className="space-y-6">
@@ -94,15 +96,25 @@ export function CustomersPage() {
           ) : customers.error ? (
             <FormError error={customers.error} />
           ) : (
-            <CustomersTable
-              customers={rows}
-              canInvite={can('customers.edit')}
-              canDelete={can('customers.delete')}
-              invitingId={invite.isPending ? (invite.variables?.id ?? null) : null}
-              deletingId={remove.isPending ? (remove.variables?.id ?? null) : null}
-              onInvite={(customer) => invite.mutate(customer)}
-              onDelete={(customer) => remove.mutate(customer)}
-            />
+            <>
+              <CustomersTable
+                customers={paged.items}
+                canInvite={can('customers.edit')}
+                canDelete={can('customers.delete')}
+                invitingId={invite.isPending ? (invite.variables?.id ?? null) : null}
+                deletingId={remove.isPending ? (remove.variables?.id ?? null) : null}
+                onInvite={(customer) => invite.mutate(customer)}
+                onDelete={(customer) => remove.mutate(customer)}
+              />
+              <ListPagination
+                page={paged.page}
+                pageCount={paged.pageCount}
+                total={paged.total}
+                from={paged.from}
+                to={paged.to}
+                onPage={paged.setPage}
+              />
+            </>
           )}
           <FormError error={invite.error ?? remove.error} />
           {invite.data && invite.variables ? (

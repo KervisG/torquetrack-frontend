@@ -23,7 +23,9 @@ const newQuote: AdminQuoteValues = {
   vehicle: { year: '', make: '', model: '', engine: '', vin: '' },
   items: [],
   shipping: 0,
+  shippingAddress: { address1: '', city: '', state: '', zip: '' },
   tax: 0,
+  taxOverride: { enabled: false, reason: '' },
   memo: '',
 }
 
@@ -75,6 +77,7 @@ export function QuoteEditorDialog({ open, onOpenChange }: QuoteEditorDialogProps
               hideSubmit
               defaultValues={newQuote}
               canSearchCatalog={can('products.view')}
+              canOverrideTax={can('tax_exemptions.review')}
               submitting={save.isPending}
               error={save.error}
               onDirtyChange={setDirty}

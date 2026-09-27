@@ -1,6 +1,7 @@
 import type { LineItem } from '@/components/line-items-table'
 import type { DocumentTotals } from '@/features/account/portal/types'
 import { apiRequest } from '@/lib/api-client'
+import { toFulfillmentStatus, type Carrier } from '@/lib/fulfillment'
 
 import type { AdminOrder, OrderCustomer, OrderRefund } from './types'
 
@@ -29,12 +30,22 @@ type RawOrder = {
   refunds?: RawRefund[]
   amountRefunded?: number
   refundableAmount?: number
+  fulfillmentStatus?: string
+  carrier?: string
+  trackingNumber?: string
+  trackingUrl?: string | null
+  shippedAt?: string | null
+  deliveredAt?: string | null
 }
 
 type RawRefund = Omit<OrderRefund, 'createdAt'> & { createdAt: string }
 
 function toRefund(row: RawRefund): OrderRefund {
   return { ...row, createdAt: new Date(row.createdAt) }
+}
+
+function optionalDate(value: string | null | undefined): Date | null {
+  return value ? new Date(value) : null
 }
 
 function text(value: unknown): string {
@@ -108,6 +119,12 @@ function toOrder(row: RawOrder): AdminOrder {
     refunds: (row.refunds ?? []).map(toRefund),
     amountRefunded: num(row.amountRefunded),
     refundableAmount: num(row.refundableAmount),
+    fulfillmentStatus: toFulfillmentStatus(row.fulfillmentStatus),
+    carrier: text(row.carrier),
+    trackingNumber: text(row.trackingNumber),
+    trackingUrl: row.trackingUrl ?? null,
+    shippedAt: optionalDate(row.shippedAt),
+    deliveredAt: optionalDate(row.deliveredAt),
   }
 }
 
@@ -149,4 +166,20 @@ export async function refundOrder(
     body: JSON.stringify(body),
   })
   return toRefund(row)
+}
+
+export type FulfillmentUpdate =
+  | { status: 'PREPARING' | 'DELIVERED' }
+  | { status: 'SHIPPED'; carrier: Carrier; trackingNumber: string }
+
+// Enviar `SHIPPED` otra vez con otra guía la corrige y vuelve a avisar al
+// cliente; el backend guarda la fecha del primer despacho.
+export function updateFulfillment(
+  id: string,
+  body: FulfillmentUpdate,
+): Promise<{ fulfillmentStatus: string }> {
+  return apiRequest<{ fulfillmentStatus: string }>(
+    `/admin/orders/${encodeURIComponent(id)}/fulfillment`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
 }

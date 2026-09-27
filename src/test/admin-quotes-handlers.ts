@@ -59,7 +59,10 @@ export function quotesBackend(initial: QuoteApiRow[]) {
       return HttpResponse.json(quotes)
     }),
     http.post('/api/admin/quotes/', async ({ request }) => {
-      const body = (await request.json()) as QuoteApiRow & { shipping?: number; tax?: number }
+      const body = (await request.json()) as QuoteApiRow & {
+        shipping?: number
+        taxOverride?: { amount: number; reason: string }
+      }
       calls.push({ method: 'POST', path: '/api/admin/quotes/', body })
       const index = find(body.id)
       const saved = quoteRow({
@@ -67,7 +70,8 @@ export function quotesBackend(initial: QuoteApiRow[]) {
         ...body,
         id: body.id || 'QID_NEW',
         number: index >= 0 ? quotes[index].number : 'Q10099',
-        totals: { subtotal: 1, core: 0, shipping: body.shipping, tax: body.tax, total: 777 },
+        // Como el backend: el impuesto solo lo fija un override.
+        totals: { subtotal: 1, core: 0, shipping: body.shipping, tax: body.taxOverride?.amount ?? 0, total: 777 },
       })
       if (index >= 0) quotes[index] = saved
       else quotes.push(saved)

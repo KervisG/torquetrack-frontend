@@ -1,9 +1,11 @@
+import type { ReactNode } from 'react'
+
 import { Badge } from '@/components/ui/badge'
 import { formatMoney } from '@/lib/money'
 
 import { formatDate } from '@/lib/format-date'
 
-type Column = { label: string; value: (row: DocumentRow) => string }
+type Column = { label: string; value: (row: DocumentRow) => ReactNode }
 
 type DocumentRow = {
   id: string
@@ -12,12 +14,14 @@ type DocumentRow = {
   createdAt: Date
   total?: number
   extra?: string
+  shipment?: ReactNode
 }
 
 type DocumentsTableProps = {
   label: string
   numberLabel: string
   extraLabel?: string
+  shipmentLabel?: string
   rows: DocumentRow[]
   emptyMessage: string
 }
@@ -28,6 +32,7 @@ export function DocumentsTable({
   label,
   numberLabel,
   extraLabel,
+  shipmentLabel,
   rows,
   emptyMessage,
 }: DocumentsTableProps) {
@@ -37,6 +42,7 @@ export function DocumentsTable({
 
   const columns: Column[] = [{ label: 'Date', value: (row) => formatDate(row.createdAt) }]
   if (extraLabel) columns.push({ label: extraLabel, value: (row) => row.extra ?? '—' })
+  if (shipmentLabel) columns.push({ label: shipmentLabel, value: (row) => row.shipment ?? '—' })
 
   return (
     <div className="overflow-x-auto">

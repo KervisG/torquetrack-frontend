@@ -1,55 +1,84 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
+import { useWatch, type UseFormReturn } from 'react-hook-form'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
-import type { QuoteLineValues } from '@/lib/validators/admin-quote'
+import { formatMoney } from '@/lib/money'
+import type { AdminQuoteValues } from '@/lib/validators/admin-quote'
 
 import { estimateQuoteTax } from '../api'
+import type { QuoteTaxSource } from '../types'
 
-type QuoteTaxControlsProps = {
-  items: QuoteLineValues[]
-  shipping: number
-  taxError?: string
-  onTax: (tax: number) => void
-  taxInput: ReactNode
+export type SavedQuoteTax = {
+  amount: number
+  source: QuoteTaxSource
+  description: string
 }
 
-// La suma solo arma el pedido al servicio de impuesto. El total de la
-// cotización lo recalcula el backend al guardar.
-function requestAmounts(items: QuoteLineValues[]) {
+type QuoteTaxControlsProps = {
+  form: UseFormReturn<AdminQuoteValues>
+  // Solo con `tax_exemptions.review`: el backend rechaza el override sin él.
+  canOverride: boolean
+  quoteId?: string
+  customerId?: string
+  savedTax?: SavedQuoteTax
+}
+
+const SOURCE_LABELS: Record<Exclude<QuoteTaxSource, ''>, string> = {
+  calculated: 'Calculated',
+  exempt: 'Tax exempt',
+  manual: 'Manual override',
+}
+
+// La suma solo arma el pedido de estimación. El impuesto que vale es el que
+// recalcula el backend al guardar.
+function requestAmounts(items: AdminQuoteValues['items']) {
+  const finite = (value: number) => (Number.isFinite(value) ? value : 0)
   return items.reduce(
     (totals, item) => ({
-      subtotal: totals.subtotal + (Number.isFinite(item.quantity) ? item.quantity : 0) * (Number.isFinite(item.unitPrice) ? item.unitPrice : 0),
-      coreCharge: totals.coreCharge + (Number.isFinite(item.quantity) ? item.quantity : 0) * (Number.isFinite(item.coreCharge) ? item.coreCharge : 0),
+      subtotal: totals.subtotal + finite(item.quantity) * finite(item.unitPrice),
+      coreCharge: totals.coreCharge + finite(item.quantity) * finite(item.coreCharge),
     }),
     { subtotal: 0, coreCharge: 0 },
   )
 }
 
-export function QuoteTaxControls({ items, shipping, taxError, onTax, taxInput }: QuoteTaxControlsProps) {
-  const [state, setState] = useState('')
-  const [zip, setZip] = useState('')
-  const [manual, setManual] = useState(true)
+export function QuoteTaxControls({
+  form,
+  canOverride,
+  quoteId,
+  customerId,
+  savedTax,
+}: QuoteTaxControlsProps) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<unknown>(null)
-  const [source, setSource] = useState('')
+  const [estimate, setEstimate] = useState<{ tax: number; source: string } | null>(null)
+  const items = useWatch({ control: form.control, name: 'items' })
+  const shipping = useWatch({ control: form.control, name: 'shipping' })
+  const address = useWatch({ control: form.control, name: 'shippingAddress' })
+  const customerEmail = useWatch({ control: form.control, name: 'customer.email' })
+  const overriding = useWatch({ control: form.control, name: 'taxOverride.enabled' })
+  const errors = form.formState.errors
+  const manual = canOverride && overriding
 
   async function calculate() {
     setPending(true)
     setError(null)
     try {
-      const amounts = requestAmounts(items)
+      const amounts = requestAmounts(items ?? [])
       const result = await estimateQuoteTax({
         subtotal: amounts.subtotal,
         coreCharge: amounts.coreCharge,
         shipping: Number.isFinite(shipping) ? shipping : 0,
-        state,
-        zip,
+        address: address ?? { address1: '', city: '', state: '', zip: '' },
+        quoteId,
+        customerId,
+        email: customerEmail ?? '',
       })
-      onTax(result.tax)
-      setSource(result.source)
-      setManual(false)
+      form.setValue('tax', result.tax, { shouldDirty: true, shouldValidate: true })
+      form.setValue('taxOverride.enabled', false, { shouldDirty: true })
+      setEstimate({ tax: result.tax, source: result.source })
     } catch (caught) {
       setError(caught)
     } finally {
@@ -57,31 +86,67 @@ export function QuoteTaxControls({ items, shipping, taxError, onTax, taxInput }:
     }
   }
 
+  let shown: { amount: string; source: string }
+  if (estimate) {
+    shown = { amount: formatMoney(estimate.tax), source: `Estimate: ${estimate.source}` }
+  } else if (savedTax?.source) {
+    const label = SOURCE_LABELS[savedTax.source]
+    shown = {
+      amount: formatMoney(savedTax.amount),
+      source: savedTax.description ? `${label} (${savedTax.description})` : label,
+    }
+  } else {
+    shown = { amount: '—', source: 'Calculated when you save' }
+  }
+
   return (
     <div className="space-y-4 sm:col-span-3">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FormField id="quote-tax-state" label="Ship-to state" value={state} onChange={(event) => setState(event.target.value)} />
-        <FormField id="quote-tax-zip" label="Ship-to ZIP" value={zip} onChange={(event) => setZip(event.target.value)} />
-      </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" variant="outline" disabled={pending} onClick={() => void calculate()}>
-          {pending ? 'Calculating…' : 'Auto tax'}
+          {pending ? 'Calculating…' : 'Estimate tax'}
         </Button>
-        <Button type="button" variant="outline" disabled={pending || manual} onClick={() => void calculate()}>
-          Recalculate
-        </Button>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={manual}
-            onChange={(event) => setManual(event.target.checked)}
-          />
-          Manual override
-        </label>
+        {canOverride ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" {...form.register('taxOverride.enabled')} />
+            Manual override
+          </label>
+        ) : null}
       </div>
-      {source && !manual ? <p className="text-sm text-muted-foreground">{source}</p> : null}
-      <div className={manual ? undefined : 'pointer-events-none opacity-70'}>{taxInput}</div>
-      {taxError ? <p className="text-sm text-destructive">{taxError}</p> : null}
+      {manual ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField
+            id="quote-tax"
+            label="Tax"
+            type="number"
+            min={0}
+            step="0.01"
+            error={errors.tax?.message}
+            {...form.register('tax', { valueAsNumber: true })}
+          />
+          <FormField
+            id="quote-tax-override-reason"
+            label="Override reason"
+            error={errors.taxOverride?.reason?.message}
+            {...form.register('taxOverride.reason')}
+          />
+        </div>
+      ) : (
+        <div className="space-y-1 text-sm">
+          <dl aria-label="Tax" className="space-y-1">
+            <div className="flex gap-2">
+              <dt className="font-medium">Tax</dt>
+              <dd>{shown.amount}</dd>
+            </div>
+            <div className="flex gap-2 text-muted-foreground">
+              <dt>Source</dt>
+              <dd>{shown.source}</dd>
+            </div>
+          </dl>
+          <p className="text-muted-foreground">
+            Tax is recalculated from the ship-to address when you save.
+          </p>
+        </div>
+      )}
       {error ? <FormError error={error} /> : null}
     </div>
   )

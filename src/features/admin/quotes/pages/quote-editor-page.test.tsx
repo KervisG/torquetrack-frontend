@@ -71,8 +71,10 @@ describe('QuoteEditorPage', () => {
         { title: 'EGR Cooler', partNumber: 'EGR-60', quantity: 2, unitPrice: 350, coreCharge: 0 },
       ],
       shipping: 40,
-      tax: 0,
     })
+    // El impuesto lo recalcula el backend: sin override el editor no lo manda.
+    expect(saved?.body).not.toHaveProperty('tax')
+    expect(saved?.body).not.toHaveProperty('taxOverride')
   })
 
   it('keeps the quote customer as a snapshot without customers.edit', async () => {

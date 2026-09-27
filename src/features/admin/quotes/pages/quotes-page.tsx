@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -57,12 +58,12 @@ export function QuotesPage() {
     enabled: allowed,
   })
 
+  const rows = [...(quotes.data ?? [])].reverse().filter((quote) => matches(quote, search, status))
+  const paged = usePagedRows(rows, `${search}|${status}`)
+
   if (!allowed) {
     return <PermissionNotice title="Quotes" message="You do not have permission to view quotes." />
   }
-
-  // La API devuelve de más vieja a más nueva; el panel muestra primero lo último.
-  const rows = [...(quotes.data ?? [])].reverse().filter((quote) => matches(quote, search, status))
 
   return (
     <section className="space-y-6">
@@ -109,7 +110,17 @@ export function QuotesPage() {
           ) : quotes.error ? (
             <FormError error={quotes.error} />
           ) : (
-            <QuotesTable quotes={rows} />
+            <>
+              <QuotesTable quotes={paged.items} />
+              <ListPagination
+                page={paged.page}
+                pageCount={paged.pageCount}
+                total={paged.total}
+                from={paged.from}
+                to={paged.to}
+                onPage={paged.setPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>

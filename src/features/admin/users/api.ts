@@ -13,6 +13,26 @@ export function listRoles(): Promise<AdminRole[]> {
   return apiRequest<AdminRole[]>('/admin/roles')
 }
 
+export function createRole(body: RoleWrite): Promise<AdminRole> {
+  return apiRequest<AdminRole>('/admin/roles', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function updateRole(slug: string, body: RoleWrite): Promise<AdminRole> {
+  return apiRequest<AdminRole>(`/admin/roles/${encodeURIComponent(slug)}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
+}
+
+export type RoleWrite = {
+  name: string
+  fullAccess: boolean
+  permissions: string[]
+}
+
 // `role: null` quita el acceso al panel; la cuenta queda como cliente. El
 // backend rechaza con 400 cualquier otro campo.
 export function updateUser(

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -71,6 +72,7 @@ export function ProductsPage() {
     () => (products.data ?? []).filter((product) => matches(product, search)),
     [products.data, search],
   )
+  const paged = usePagedRows(rows, search)
 
   if (!allowed) {
     return (
@@ -105,16 +107,26 @@ export function ProductsPage() {
           ) : products.error ? (
             <FormError error={products.error} />
           ) : (
-            <ProductsTable
-              products={rows}
-              canEdit={canEdit}
-              deactivatingId={deactivate.isPending ? (deactivate.variables?.id ?? null) : null}
-              onEdit={(product) => {
-                save.reset()
-                setEditing(product)
-              }}
-              onDeactivate={(product) => deactivate.mutate(product)}
-            />
+            <>
+              <ProductsTable
+                products={paged.items}
+                canEdit={canEdit}
+                deactivatingId={deactivate.isPending ? (deactivate.variables?.id ?? null) : null}
+                onEdit={(product) => {
+                  save.reset()
+                  setEditing(product)
+                }}
+                onDeactivate={(product) => deactivate.mutate(product)}
+              />
+              <ListPagination
+                page={paged.page}
+                pageCount={paged.pageCount}
+                total={paged.total}
+                from={paged.from}
+                to={paged.to}
+                onPage={paged.setPage}
+              />
+            </>
           )}
           {deactivate.error ? <FormError error={deactivate.error} /> : null}
         </CardContent>

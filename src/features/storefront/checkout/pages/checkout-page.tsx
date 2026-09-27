@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 
+import { CartPriceNotices } from '@/components/cart-price-notices'
 import { FormField } from '@/components/form-field'
+import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontButton } from '@/components/storefront-button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -20,7 +22,7 @@ import {
   checkoutCustomerSchema,
   type CheckoutCustomerValues,
 } from '@/lib/validators/checkout-customer'
-import { useCartStore } from '@/stores/cart-store'
+import { MAX_CART_QUANTITY, useCartStore } from '@/stores/cart-store'
 
 import {
   checkFitment,
@@ -58,6 +60,7 @@ const PREFILL_FIELDS = [
 
 export function CheckoutPage() {
   const items = useCartStore((state) => state.items)
+  const priceChanges = useCartStore((state) => state.priceChanges)
   const shipping = useCartStore((state) => state.shipping)
   const setShipping = useCartStore((state) => state.setShipping)
   const setQty = useCartStore((state) => state.setQty)
@@ -279,6 +282,7 @@ export function CheckoutPage() {
               <CardTitle className="text-base">1. Your Cart</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-2">
+              <CartPriceNotices />
               {rows.length ? (
                 <ul className="divide-y">
                   {rows.map((row) => (
@@ -297,9 +301,16 @@ export function CheckoutPage() {
                             <p className="font-medium leading-snug">{row.title}</p>
                             <p className="text-sm text-muted-foreground">Part # {row.partNumber}</p>
                           </div>
-                          <p className="shrink-0 font-semibold">
-                            {formatMoney((Number(row.price) + Number(row.coreCharge || 0)) * row.qty)}
-                          </p>
+                          <div className="shrink-0 text-right">
+                            {priceChanges[row.id] != null ? (
+                              <p className="text-xs text-muted-foreground line-through">
+                                {formatMoney(priceChanges[row.id])}
+                              </p>
+                            ) : null}
+                            <p className="font-semibold">
+                              {formatMoney((Number(row.price) + Number(row.coreCharge || 0)) * row.qty)}
+                            </p>
+                          </div>
                         </div>
                         <div className="mt-2 flex items-center gap-2">
                           <StorefrontButton
@@ -317,6 +328,7 @@ export function CheckoutPage() {
                             size="sm"
                             tone="outline"
                             className="size-8 px-0"
+                            disabled={row.qty >= MAX_CART_QUANTITY}
                             onClick={() => setQty(row.id, row.qty + 1)}
                           >
                             +
@@ -330,6 +342,7 @@ export function CheckoutPage() {
                             Remove
                           </StorefrontButton>
                         </div>
+                        <CartQuantityLimit qty={row.qty} />
                       </div>
                     </li>
                   ))}

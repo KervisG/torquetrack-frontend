@@ -21,8 +21,8 @@ type Row = {
 }
 
 const roles = [
-  { id: 1, slug: 'admin', name: 'Admin', fullAccess: true },
-  { id: 2, slug: 'sales', name: 'Sales', fullAccess: false },
+  { id: 1, slug: 'admin', name: 'Admin', fullAccess: true, permissions: ['users.manage'] },
+  { id: 2, slug: 'sales', name: 'Sales', fullAccess: false, permissions: ['orders.view'] },
 ]
 
 function row(overrides: Partial<Row>): Row {

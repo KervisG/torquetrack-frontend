@@ -1,9 +1,27 @@
 import { apiRequest } from '@/lib/api-client'
+import { toFulfillmentStatus } from '@/lib/fulfillment'
 import type { AccountProfileValues } from '@/lib/validators/account-profile'
 
 import type { AccountOrder, AccountProfile, AccountQuote } from './types'
 
-type RawOrder = Omit<AccountOrder, 'createdAt'> & { createdAt: string }
+type RawOrder = Omit<
+  AccountOrder,
+  | 'createdAt'
+  | 'fulfillmentStatus'
+  | 'carrier'
+  | 'trackingNumber'
+  | 'trackingUrl'
+  | 'shippedAt'
+  | 'deliveredAt'
+> & {
+  createdAt: string
+  fulfillmentStatus?: string
+  carrier?: string
+  trackingNumber?: string
+  trackingUrl?: string | null
+  shippedAt?: string | null
+  deliveredAt?: string | null
+}
 type RawQuote = Omit<AccountQuote, 'createdAt' | 'expiresAt'> & {
   createdAt: string
   expiresAt: string | null
@@ -24,7 +42,16 @@ export async function updateAccount(values: AccountProfileValues): Promise<Accou
 
 export async function listAccountOrders(): Promise<AccountOrder[]> {
   const rows = await apiRequest<RawOrder[]>('/account/orders')
-  return rows.map((row) => ({ ...row, createdAt: new Date(row.createdAt) }))
+  return rows.map((row) => ({
+    ...row,
+    createdAt: new Date(row.createdAt),
+    fulfillmentStatus: toFulfillmentStatus(row.fulfillmentStatus),
+    carrier: row.carrier ?? '',
+    trackingNumber: row.trackingNumber ?? '',
+    trackingUrl: row.trackingUrl ?? null,
+    shippedAt: row.shippedAt ? new Date(row.shippedAt) : null,
+    deliveredAt: row.deliveredAt ? new Date(row.deliveredAt) : null,
+  }))
 }
 
 export async function listAccountQuotes(): Promise<AccountQuote[]> {

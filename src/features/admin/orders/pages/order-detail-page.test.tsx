@@ -113,7 +113,7 @@ describe('OrderDetailPage', () => {
   })
 
   it('updates the order status', async () => {
-    const backend = ordersBackend([orderRow({})])
+    const backend = ordersBackend([orderRow({ status: 'OPEN' })])
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/orders/OID1')
 
@@ -136,7 +136,8 @@ describe('OrderDetailPage', () => {
 
     const select = await screen.findByLabelText('Order status')
     expect(within(select).queryByRole('option', { name: 'CANCELLED' })).not.toBeInTheDocument()
-    expect(within(select).getByRole('option', { name: 'COMPLETED' })).toBeInTheDocument()
+    expect(within(select).queryByRole('option', { name: 'COMPLETED' })).not.toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: 'REJECTED' })).toBeInTheDocument()
   })
 
   it('says so when the order does not exist', async () => {

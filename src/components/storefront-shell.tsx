@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 
+import { CartPriceNotices } from '@/components/cart-price-notices'
+import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontButton } from '@/components/storefront-button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -18,10 +20,11 @@ import { useSignOut } from '@/features/account/auth/hooks/use-sign-out'
 import { listProducts } from '@/features/storefront/catalog/api'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { formatMoney } from '@/lib/money'
-import { syncCart, useCartStore } from '@/stores/cart-store'
+import { MAX_CART_QUANTITY, syncCartOwner, useCartStore } from '@/stores/cart-store'
 
 export function StorefrontShell() {
   const items = useCartStore((state) => state.items)
+  const priceChanges = useCartStore((state) => state.priceChanges)
   const drawerOpen = useCartStore((state) => state.drawerOpen)
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen)
   const remove = useCartStore((state) => state.remove)
@@ -36,13 +39,15 @@ export function StorefrontShell() {
     .filter((row): row is NonNullable<typeof row> => Boolean(row))
   const subtotal = rows.reduce((sum, row) => sum + Number(row.price || 0) * row.qty, 0)
 
+  const session = useSession()
+  const sessionKnown = !session.isPending
+  const userId = session.data?.user?.id ?? null
+
+  // El carrito vive en el backend: se lee al cargar la tienda y cada vez que
+  // cambia la cuenta de la sesión (login, logout), así se ve el fusionado.
   useEffect(() => {
-    if (!products.data) return
-    const timer = window.setTimeout(() => {
-      void syncCart(products.data).catch(() => undefined)
-    }, 250)
-    return () => window.clearTimeout(timer)
-  }, [items, products.data])
+    if (sessionKnown) void syncCartOwner(userId)
+  }, [sessionKnown, userId])
 
   return (
     <div className="min-h-screen bg-muted/40 text-foreground">
@@ -113,6 +118,7 @@ export function StorefrontShell() {
             </SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-auto py-4">
+            <CartPriceNotices />
             {rows.length ? (
               <ul className="divide-y">
                 {rows.map((row) => (
@@ -129,9 +135,14 @@ export function StorefrontShell() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-medium leading-snug">{row.title}</p>
-                        <p className="shrink-0 text-sm font-semibold">
-                          {formatMoney(Number(row.price || 0) * row.qty)}
-                        </p>
+                        <div className="shrink-0 text-right text-sm">
+                          {priceChanges[row.id] != null ? (
+                            <p className="text-xs text-muted-foreground line-through">
+                              {formatMoney(priceChanges[row.id])}
+                            </p>
+                          ) : null}
+                          <p className="font-semibold">{formatMoney(Number(row.price || 0) * row.qty)}</p>
+                        </div>
                       </div>
                       <p className="text-sm text-muted-foreground">Part # {row.partNumber}</p>
                       <div className="mt-2 flex items-center gap-2">
@@ -152,6 +163,7 @@ export function StorefrontShell() {
                           tone="outline"
                           className="size-8 px-0"
                           aria-label={`Increase ${row.title}`}
+                          disabled={row.qty >= MAX_CART_QUANTITY}
                           onClick={() => setQty(row.id, row.qty + 1)}
                         >
                           +
@@ -165,6 +177,7 @@ export function StorefrontShell() {
                           Remove
                         </StorefrontButton>
                       </div>
+                      <CartQuantityLimit qty={row.qty} />
                     </div>
                   </li>
                 ))}

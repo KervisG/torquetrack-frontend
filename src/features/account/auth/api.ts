@@ -2,7 +2,12 @@ import { apiRequest } from '@/lib/api-client'
 import type { ForgotPasswordValues } from '@/lib/validators/forgot-password'
 import type { LoginValues } from '@/lib/validators/login'
 
-import type { EmailVerification, PasswordResetRequested, Session } from './types'
+import type {
+  EmailVerification,
+  PasswordResetRequested,
+  RegistrationAccepted,
+  Session,
+} from './types'
 
 export function getSession(): Promise<Session> {
   return apiRequest<Session>('/session')
@@ -15,14 +20,17 @@ export function login(values: LoginValues): Promise<Session> {
   })
 }
 
+// No abre sesión y responde lo mismo exista o no la cuenta, para no revelar
+// qué correos están registrados: la persona entra después de verificar o con
+// su contraseña desde `/login`.
 export function register(payload: {
   name: string
   company: string
   phone: string
   email: string
   password: string
-}): Promise<Session> {
-  return apiRequest<Session>('/register', {
+}): Promise<RegistrationAccepted> {
+  return apiRequest<RegistrationAccepted>('/register', {
     method: 'POST',
     body: JSON.stringify(payload),
   })

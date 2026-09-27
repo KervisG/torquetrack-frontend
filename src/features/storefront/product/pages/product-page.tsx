@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 
+import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontButton } from '@/components/storefront-button'
 import { getProduct } from '@/features/storefront/catalog/api'
 import { ProductPhoto } from '@/features/storefront/catalog/components/product-photo'
@@ -14,6 +15,9 @@ export function ProductPage() {
   const { id = '' } = useParams()
   const add = useCartStore((state) => state.add)
   const setDrawerOpen = useCartStore((state) => state.setDrawerOpen)
+  const inCart = useCartStore(
+    (state) => state.items.find((line) => line.id === id)?.qty ?? 0,
+  )
   const product = useQuery({
     queryKey: catalogKeys.product(id),
     queryFn: () => getProduct(id),
@@ -122,6 +126,7 @@ export function ProductPage() {
         condition={item.condition}
         stock={item.stock}
         partNumber={item.partNumber}
+        inCart={inCart}
         onAdd={() => {
           add(item.id)
           setDrawerOpen(true)
@@ -138,6 +143,7 @@ function BuyBox({
   condition,
   stock,
   partNumber,
+  inCart,
   onAdd,
 }: {
   priced: boolean
@@ -146,6 +152,7 @@ function BuyBox({
   condition?: string
   stock?: string
   partNumber?: string
+  inCart: number
   onAdd: () => void
 }) {
   const facts = [
@@ -181,6 +188,8 @@ function BuyBox({
       >
         Add to Cart
       </StorefrontButton>
+      {/* Sumar en el tope no agrega nada: el store recorta a 99. */}
+      <CartQuantityLimit qty={inCart} />
       <StorefrontButton asChild tone="outline" className="mt-2 h-11 w-full rounded-full">
         <Link to="/quote">Request a quote</Link>
       </StorefrontButton>

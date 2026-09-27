@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,7 @@ export function CartsPage() {
     () => (carts.data ?? []).filter((cart) => matches(cart, search, status)),
     [carts.data, search, status],
   )
+  const paged = usePagedRows(rows, `${search}|${status}`)
 
   if (!allowed) {
     return <PermissionNotice title="Carts" message="You do not have permission to view carts." />
@@ -110,7 +112,7 @@ export function CartsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((cart) => (
+                  {paged.items.map((cart) => (
                     <tr key={cart.id} className="border-b last:border-0">
                       <td className="py-2 pr-4">
                         <p className="font-medium">{cart.id}</p>
@@ -132,6 +134,16 @@ export function CartsPage() {
               </table>
             </div>
           )}
+          {rows.length > 0 ? (
+            <ListPagination
+              page={paged.page}
+              pageCount={paged.pageCount}
+              total={paged.total}
+              from={paged.from}
+              to={paged.to}
+              onPage={paged.setPage}
+            />
+          ) : null}
         </CardContent>
       </Card>
     </section>

@@ -29,6 +29,11 @@ export type PasswordResetRequested = {
   message: string
 }
 
+export type RegistrationAccepted = {
+  ok: true
+  message: string
+}
+
 // Cuántos pedidos y cotizaciones de invitado se sumaron a la cuenta al verificar.
 export type EmailVerification = {
   ok: true

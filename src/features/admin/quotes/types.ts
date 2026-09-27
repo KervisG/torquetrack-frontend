@@ -22,6 +22,17 @@ export type QuoteVehicle = {
   vin: string
 }
 
+export type QuoteShippingAddress = {
+  address1: string
+  city: string
+  state: string
+  zip: string
+}
+
+// De dónde salió el impuesto guardado; `''` en una cotización anterior a
+// que el servidor lo calculara.
+export type QuoteTaxSource = 'calculated' | 'exempt' | 'manual' | ''
+
 export type AdminQuote = {
   id: string
   number: string
@@ -37,6 +48,10 @@ export type AdminQuote = {
   // Lo que se cargó en el editor; el backend recalcula `totals` a partir de esto.
   shipping: number
   tax: number
+  shippingAddress: QuoteShippingAddress
+  taxSource: QuoteTaxSource
+  taxDescription: string
+  taxOverrideReason: string
   memo: string
   createdBy: string
   orderNumber: string

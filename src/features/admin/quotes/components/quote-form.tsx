@@ -11,7 +11,7 @@ import { adminQuoteSchema, type AdminQuoteValues } from '@/lib/validators/admin-
 
 import { decodeQuoteVin } from '../api'
 import { QuoteCatalogPicker } from './quote-catalog-picker'
-import { QuoteTaxControls } from './quote-tax-controls'
+import { QuoteTaxControls, type SavedQuoteTax } from './quote-tax-controls'
 import { EDITABLE_QUOTE_STATUSES } from '../types'
 
 type QuoteFormProps = {
@@ -20,6 +20,14 @@ type QuoteFormProps = {
   error: unknown
   onSubmit: (values: AdminQuoteValues) => void
   canSearchCatalog?: boolean
+  // Identifican al cliente de la cotización: el impuesto se estima con su
+  // exención, nunca con la del empleado en sesión.
+  quoteId?: string
+  customerId?: string
+  // Con `tax_exemptions.review` el editor ofrece el override manual; sin él
+  // el impuesto es de solo lectura (lo calcula el backend al guardar).
+  canOverrideTax?: boolean
+  savedTax?: SavedQuoteTax
   // El modal manda el submit desde su barra fija y avisa si hay cambios.
   formId?: string
   hideSubmit?: boolean
@@ -42,6 +50,10 @@ export function QuoteForm({
   error,
   onSubmit,
   canSearchCatalog = false,
+  quoteId,
+  customerId,
+  canOverrideTax = false,
+  savedTax,
   formId,
   hideSubmit = false,
   onDirtyChange,
@@ -56,8 +68,6 @@ export function QuoteForm({
   }, [isDirty, onDirtyChange])
   const items = useFieldArray({ control: form.control, name: 'items' })
   const vehicle = useWatch({ control: form.control, name: 'vehicle' })
-  const lineItems = useWatch({ control: form.control, name: 'items' })
-  const shipping = useWatch({ control: form.control, name: 'shipping' })
   const [vinError, setVinError] = useState<unknown>(null)
   const [vinPending, setVinPending] = useState(false)
   const errors = form.formState.errors
@@ -209,6 +219,25 @@ export function QuoteForm({
       </fieldset>
 
       <fieldset className="space-y-4">
+        <legend className="text-lg font-semibold">Ship to</legend>
+        <div className="grid gap-4 sm:grid-cols-4">
+          <FormField
+            id="quote-ship-address1"
+            label="Ship-to address"
+            {...form.register('shippingAddress.address1')}
+          />
+          <FormField id="quote-ship-city" label="Ship-to city" {...form.register('shippingAddress.city')} />
+          <FormField
+            id="quote-ship-state"
+            label="Ship-to state"
+            maxLength={2}
+            {...form.register('shippingAddress.state')}
+          />
+          <FormField id="quote-ship-zip" label="Ship-to ZIP" {...form.register('shippingAddress.zip')} />
+        </div>
+      </fieldset>
+
+      <fieldset className="space-y-4">
         <legend className="text-lg font-semibold">Pricing & status</legend>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField
@@ -221,21 +250,11 @@ export function QuoteForm({
             {...form.register('shipping', { valueAsNumber: true })}
           />
           <QuoteTaxControls
-            items={lineItems ?? []}
-            shipping={shipping ?? 0}
-            taxError={errors.tax?.message}
-            onTax={(tax) => form.setValue('tax', tax, { shouldDirty: true, shouldValidate: true })}
-            taxInput={
-              <FormField
-                id="quote-tax"
-                label="Tax"
-                type="number"
-                min={0}
-                step="0.01"
-                error={errors.tax?.message}
-                {...form.register('tax', { valueAsNumber: true })}
-              />
-            }
+            form={form}
+            canOverride={canOverrideTax}
+            quoteId={quoteId}
+            customerId={customerId}
+            savedTax={savedTax}
           />
           <SelectField
             id="quote-status"

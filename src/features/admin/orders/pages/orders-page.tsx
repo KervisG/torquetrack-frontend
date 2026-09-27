@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { SelectField } from '@/components/select-field'
 import { PageHeader } from '@/components/app-shell/page-header'
 import { Card, CardContent } from '@/components/ui/card'
@@ -52,13 +53,13 @@ export function OrdersPage() {
     enabled: allowed,
   })
 
+  const all = orders.data ?? []
+  const rows = [...all].reverse().filter((order) => matches(order, search, status, payment))
+  const paged = usePagedRows(rows, `${search}|${status}|${payment}`)
+
   if (!allowed) {
     return <PermissionNotice title="Orders" message="You do not have permission to view orders." />
   }
-
-  const all = orders.data ?? []
-  // La API devuelve de más viejo a más nuevo; el panel muestra primero lo último.
-  const rows = [...all].reverse().filter((order) => matches(order, search, status, payment))
 
   return (
     <section className="space-y-6">
@@ -99,7 +100,17 @@ export function OrdersPage() {
           ) : orders.error ? (
             <FormError error={orders.error} />
           ) : (
-            <OrdersTable orders={rows} />
+            <>
+              <OrdersTable orders={paged.items} />
+              <ListPagination
+                page={paged.page}
+                pageCount={paged.pageCount}
+                total={paged.total}
+                from={paged.from}
+                to={paged.to}
+                onPage={paged.setPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>

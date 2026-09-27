@@ -3,7 +3,7 @@ import type { DocumentTotals } from '@/features/account/portal/types'
 import { apiRequest } from '@/lib/api-client'
 import type { AdminQuoteValues } from '@/lib/validators/admin-quote'
 
-import type { AdminQuote } from './types'
+import type { AdminQuote, QuoteShippingAddress, QuoteTaxSource } from './types'
 
 type RawRecord = Record<string, unknown>
 
@@ -19,6 +19,10 @@ type RawQuote = {
   items?: RawRecord[]
   totals?: DocumentTotals
   memo?: string
+  shippingAddress?: RawRecord | null
+  taxSource?: string
+  taxDescription?: string
+  taxOverride?: RawRecord | null
   createdBy?: string
   orderNumber?: string
   lastEmailedAt?: string | null
@@ -47,7 +51,12 @@ function toLineItem(item: RawRecord): LineItem {
   }
 }
 
+function toTaxSource(value: unknown): QuoteTaxSource {
+  return value === 'calculated' || value === 'exempt' || value === 'manual' ? value : ''
+}
+
 function toQuote(row: RawQuote): AdminQuote {
+  const address = row.shippingAddress ?? {}
   const customer = row.customer ?? {}
   const vehicle = row.vehicle ?? {}
   const totals = row.totals ?? {}
@@ -75,6 +84,15 @@ function toQuote(row: RawQuote): AdminQuote {
     totals,
     shipping: num(totals.shipping),
     tax: num(totals.tax),
+    shippingAddress: {
+      address1: text(address.address1),
+      city: text(address.city),
+      state: text(address.state),
+      zip: text(address.zip),
+    },
+    taxSource: toTaxSource(row.taxSource),
+    taxDescription: text(row.taxDescription),
+    taxOverrideReason: text(row.taxOverride?.reason),
     memo: text(row.memo),
     createdBy: text(row.createdBy),
     orderNumber: text(row.orderNumber),
@@ -89,13 +107,19 @@ export async function listQuotes(): Promise<AdminQuote[]> {
 }
 
 // Alta (`id: null`) o edición: el backend reemplaza el contenido y recalcula
-// los totales, así que se manda la cotización completa.
+// los totales y el impuesto, así que se manda la cotización completa sin
+// `tax`. El impuesto solo viaja como `taxOverride`, que el backend acepta
+// solo con `tax_exemptions.review` (sin el permiso responde 403).
 export function saveQuote(
   payload: AdminQuoteValues & { id: string | null; customerId: string | null },
 ): Promise<{ updated: boolean; quote: { id: string; number: string } }> {
+  const { tax, taxOverride, ...quote } = payload
+  const body = taxOverride.enabled
+    ? { ...quote, taxOverride: { amount: tax, reason: taxOverride.reason } }
+    : quote
   return apiRequest<{ updated: boolean; quote: { id: string; number: string } }>(
     '/admin/quotes',
-    { method: 'POST', body: JSON.stringify(payload) },
+    { method: 'POST', body: JSON.stringify(body) },
   )
 }
 
@@ -106,13 +130,17 @@ export function decodeQuoteVin(vin: string): Promise<{ vehicle: { vin: string; y
   })
 }
 
+// La exención la decide el backend con el cliente de la cotización (`quoteId`,
+// `customerId` o el email de una cuenta registrada), no con la sesión del staff.
 export function estimateQuoteTax(payload: {
   subtotal: number
   coreCharge: number
   shipping: number
-  state: string
-  zip: string
-}): Promise<{ tax: number; rate: number; source: string }> {
+  address: QuoteShippingAddress
+  quoteId?: string
+  customerId?: string
+  email?: string
+}): Promise<{ tax: number; rate: number; source: string; exempt?: boolean }> {
   return apiRequest('/admin/quotes/tax', {
     method: 'POST',
     body: JSON.stringify(payload),

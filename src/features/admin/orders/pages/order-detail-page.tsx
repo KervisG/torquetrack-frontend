@@ -14,6 +14,7 @@ import { formatDate } from '@/lib/format-date'
 import { formatMoney } from '@/lib/money'
 
 import { listOrders } from '../api'
+import { FulfillmentPanel } from '../components/fulfillment-panel'
 import { OrderStatusForm } from '../components/order-status-form'
 import { PaymentActions } from '../components/payment-actions'
 import { RefundForm } from '../components/refund-form'
@@ -109,6 +110,9 @@ export function OrderDetailPage() {
           </dl>
         </Section>
       </div>
+      <Section title="Fulfillment">
+        <FulfillmentPanel order={order} canUpdate={canChangeStatus} />
+      </Section>
       <Section title="Items">
         <LineItemsTable items={order.items} />
         <div className="ml-auto mt-4 max-w-xs">

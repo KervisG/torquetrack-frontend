@@ -1,6 +1,6 @@
 import type { SessionRole } from '@/features/account/auth/types'
 
-export type AdminRole = SessionRole & { id: number }
+export type AdminRole = SessionRole & { id: number; permissions: string[] }
 
 export type AdminUser = {
   id: string
