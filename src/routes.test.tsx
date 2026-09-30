@@ -54,7 +54,8 @@ describe('appRoutes', () => {
   })
 
   it('keeps every admin page behind the lazy admin guard', async () => {
-    const [guard] = matchRoutes(appRoutes, '/admin/users')!
+    // El guard es el padre de la página: el penúltimo match.
+    const guard = matchRoutes(appRoutes, '/admin/users')!.at(-2)!
 
     expect(await loadComponent(guard.route)).toBe(AdminAuthGuard)
   })
