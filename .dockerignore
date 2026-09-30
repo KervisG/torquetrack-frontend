@@ -1,0 +1,19 @@
+# La imagen instala dependencias y compila desde cero: nada local debe colarse
+# en el contexto, y menos los secretos.
+node_modules
+dist
+dist-ssr
+coverage
+.env
+.env.*
+.git
+.gitignore
+.vscode
+.idea
+*.log
+*.local
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md
+skills

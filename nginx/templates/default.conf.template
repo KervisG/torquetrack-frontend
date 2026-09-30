@@ -1,0 +1,139 @@
+# La imagen oficial de nginx renderiza este template con envsubst al arrancar
+# y lo deja en /etc/nginx/conf.d/, dentro del bloque `http`. Solo se sustituyen
+# BACKEND_UPSTREAM y CLOUDFLARE_ONLY (NGINX_ENVSUBST_FILTER en el Dockerfile);
+# las variables propias de nginx ($host, $remote_addr...) llegan intactas.
+
+server_tokens off;
+
+# Cloudflare termina TLS y reenvía la IP del cliente en CF-Connecting-IP. Solo
+# se le cree a ese header si la conexión viene de un rango de Cloudflare; desde
+# ahí en adelante $remote_addr es el cliente real.
+include /etc/nginx/cloudflare/realip.conf;
+real_ip_header CF-Connecting-IP;
+
+# Después de realip, $remote_addr ya es el cliente, así que allow/deny miraría
+# la IP equivocada. $realip_remote_addr conserva la IP de la conexión TCP (el
+# nodo de Cloudflare). El loopback se admite para el healthcheck del contenedor.
+geo $realip_remote_addr $from_cloudflare {
+    default 0;
+    include /etc/nginx/cloudflare/geo.conf;
+    127.0.0.1 1;
+    ::1 1;
+}
+
+# Solo CLOUDFLARE_ONLY=off (exacto) desactiva la restricción, para probar en
+# local. Cualquier otro valor, incluido un error de tipeo, la deja activa.
+map "${CLOUDFLARE_ONLY}:$from_cloudflare" $origin_denied {
+    default 1;
+    "~^off:" 0;
+    "~:1$" 0;
+}
+
+# Cloudflare manda el esquema original; sin el header (pruebas en local) se
+# usa el de la conexión.
+map $http_x_forwarded_proto $forwarded_proto {
+    default $http_x_forwarded_proto;
+    "" $scheme;
+}
+
+# Primera capa de tope por IP del cliente real; los throttles de DRF siguen
+# siendo la segunda capa, por ruta.
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+
+# Login del admin de Django: Django no limita sus intentos, así que sin esto
+# se pueden probar contraseñas sin tope. Solo cuentan los POST (una key vacía
+# no se contabiliza); abrir el formulario o navegar el admin no suma.
+map $request_method $admin_login_key {
+    POST $binary_remote_addr;
+    default "";
+}
+limit_req_zone $admin_login_key zone=admin_login:10m rate=5r/m;
+limit_req_status 429;
+
+upstream django {
+    server ${BACKEND_UPSTREAM};
+    keepalive 16;
+}
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Los certificados de exención de impuestos (hasta 1.5 MB) viajan en base64
+    # dentro de un JSON.
+    client_max_body_size 5m;
+
+    gzip on;
+    gzip_vary on;
+    # Sin `any`, nginx no comprime cuando el request trae `Via` (proxies).
+    gzip_proxied any;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/javascript application/json
+               application/xml image/svg+xml;
+
+    if ($origin_denied) {
+        return 403;
+    }
+
+    location = /nginx-health {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location /api/ {
+        limit_req zone=api burst=20 nodelay;
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
+    # Stripe reintenta los webhooks y la firma ya los protege: un 429 solo
+    # demoraría la confirmación de pagos.
+    location /api/webhooks/stripe/ {
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
+    location = /api/health/ {
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
+    location /django-admin/ {
+        limit_req zone=api burst=20 nodelay;
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
+    location = /django-admin/login/ {
+        limit_req zone=admin_login burst=5 nodelay;
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
+    # Estáticos de Django (admin), servidos por WhiteNoise. Vite emite en
+    # /assets/, así que no hay choque con el build del SPA.
+    location /static/ {
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
+    # Archivos con hash en el nombre: nunca cambian de contenido, se cachean
+    # 15 días. Un asset que falta devuelve 404 y no index.html, para no
+    # cachear HTML como JS.
+    location /assets/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=1296000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # index.html apunta a los assets del deploy vigente: se revalida siempre.
+    location = /index.html {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+    }
+
+    # Rutas del SPA (React Router): lo que no es un archivo cae en index.html.
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        try_files $uri $uri/ /index.html;
+    }
+}
