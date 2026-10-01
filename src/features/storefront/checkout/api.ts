@@ -57,7 +57,8 @@ export function toShippingSelection(rate: ShippingRate | null): ShippingSelectio
 export function createCheckout(payload: {
   items: Array<{ id: string; qty: number }>
   shipping: ShippingSelection
-  vehicle: VinVehicle
+  // Opcional: sin VIN el pedido se crea sin vehículo y sin chequeo de fitment.
+  vehicle?: VinVehicle
   customer: CheckoutCustomer
 }): Promise<CheckoutResponse> {
   return apiRequest<CheckoutResponse>('/checkout', {

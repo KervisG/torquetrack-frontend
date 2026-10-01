@@ -4,7 +4,9 @@ import { useForm } from 'react-hook-form'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { SelectField } from '@/components/select-field'
 import { Button } from '@/components/ui/button'
+import { toUsStateCode, US_STATE_OPTIONS } from '@/lib/us-states'
 import {
   accountProfileSchema,
   type AccountProfileValues,
@@ -37,7 +39,8 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
       address1: profile.address1,
       address2: profile.address2,
       city: profile.city,
-      state: profile.state,
+      // Un estado viejo fuera de la lista queda vacío para que se elija de nuevo.
+      state: toUsStateCode(profile.state),
       zip: profile.zip,
       country: profile.country,
     },
@@ -60,16 +63,29 @@ export function ProfileForm({ profile }: { profile: AccountProfile }) {
         <p className="text-sm text-muted-foreground">{profile.email}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        {fields.map((field) => (
-          <FormField
-            key={field.name}
-            id={`profile-${field.name}`}
-            label={field.label}
-            autoComplete={field.autoComplete}
-            error={form.formState.errors[field.name]?.message}
-            {...form.register(field.name)}
-          />
-        ))}
+        {fields.map((field) =>
+          // El checkout precarga este estado y solo acepta códigos de la lista.
+          field.name === 'state' ? (
+            <SelectField
+              key={field.name}
+              id={`profile-${field.name}`}
+              label={field.label}
+              options={US_STATE_OPTIONS}
+              autoComplete={field.autoComplete}
+              error={form.formState.errors.state?.message}
+              {...form.register(field.name)}
+            />
+          ) : (
+            <FormField
+              key={field.name}
+              id={`profile-${field.name}`}
+              label={field.label}
+              autoComplete={field.autoComplete}
+              error={form.formState.errors[field.name]?.message}
+              {...form.register(field.name)}
+            />
+          ),
+        )}
       </div>
       <FormError error={save.error} />
       {save.isSuccess ? <p className="text-sm text-muted-foreground">Profile saved.</p> : null}

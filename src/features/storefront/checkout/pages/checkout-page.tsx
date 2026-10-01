@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 
 import { CartPriceNotices } from '@/components/cart-price-notices'
 import { FormField } from '@/components/form-field'
+import { SelectField } from '@/components/select-field'
 import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontButton } from '@/components/storefront-button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +19,7 @@ import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { decodeVin } from '@/features/storefront/vin/api'
 import { ApiError } from '@/lib/api-client'
 import { formatMoney } from '@/lib/money'
+import { isUsStateCode, toUsStateCode, US_STATE_OPTIONS } from '@/lib/us-states'
 import {
   checkoutCustomerSchema,
   type CheckoutCustomerValues,
@@ -41,10 +43,19 @@ const CUSTOMER_FIELDS = [
   ['address1', 'Street address'],
   ['address2', 'Address 2 (optional)'],
   ['city', 'City'],
-  ['state', 'State (FL)'],
+  ['state', 'State'],
   ['zip', 'ZIP'],
   ['country', 'Country'],
 ] as const
+
+// Errores del backend sobre el ZIP (contra el estado elegido): se muestran
+// también en el campo. No se copia aquí la tabla de prefijos de USPS; el
+// backend es la única fuente y el checkout la vuelve a validar.
+const ZIP_API_ERRORS = new Set([
+  'ZIP code does not match the selected state.',
+  'ZIP code is not a valid US ZIP code.',
+  'Shipping ZIP must be 5 digits or ZIP+4',
+])
 
 const PREFILL_FIELDS = [
   'name',
@@ -103,7 +114,9 @@ export function CheckoutPage() {
     if (!profile) return
     // No se pisa lo que el cliente ya escribió antes de que llegara el perfil.
     for (const field of PREFILL_FIELDS) {
-      if (profile[field] && !form.getValues(field)) form.setValue(field, profile[field])
+      // Un estado guardado fuera de la lista no tiene opción en el select.
+      const value = field === 'state' ? toUsStateCode(profile.state) : profile[field]
+      if (value && !form.getValues(field)) form.setValue(field, value)
     }
   }, [account.data, form])
 
@@ -132,6 +145,10 @@ export function CheckoutPage() {
   const taxAmount = Number(tax?.tax || 0)
   const invalidPrice = rows.some((row) => !Number.isFinite(Number(row.price)) || Number(row.price) <= 0)
   const fitmentApproved = Boolean(fitment?.compatible)
+  // El VIN es opcional; si se escribió uno, tiene que estar verificado (el
+  // mismo que se decodificó) y con fitment aprobado antes de pagar.
+  const typedVin = vin.trim().toUpperCase()
+  const vinReady = !typedVin || (vehicle?.vin === typedVin && fitmentApproved)
   const cartItems = rows.map((row) => ({ id: row.id, qty: row.qty }))
   const itemsKey = JSON.stringify(cartItems)
   const rates = quoted?.itemsKey === itemsKey ? quoted.options : []
@@ -156,7 +173,7 @@ export function CheckoutPage() {
 
   async function onRates() {
     const values = form.getValues()
-    if (!values.name || !values.address1 || !values.city || !values.state || !values.zip) {
+    if (!values.name || !values.address1 || !values.city || !isUsStateCode(values.state) || !values.zip) {
       setMessage('Complete name, street, city, state and ZIP first.')
       return
     }
@@ -193,10 +210,17 @@ export function CheckoutPage() {
     }
   }
 
+  function showZipError(error: unknown) {
+    if (error instanceof ApiError && ZIP_API_ERRORS.has(error.message)) {
+      form.setError('zip', { type: 'server', message: error.message })
+    }
+  }
+
   async function onTax(): Promise<boolean> {
     const values = form.getValues()
-    if (!values.state || !values.zip) {
-      setMessage('Enter State and ZIP first.')
+    form.clearErrors('zip')
+    if (!isUsStateCode(values.state) || !values.zip) {
+      setMessage('Select a state and enter ZIP first.')
       return false
     }
     try {
@@ -214,14 +238,19 @@ export function CheckoutPage() {
       setMessage(result.source || result.label || 'Tax calculated')
       return true
     } catch (error) {
+      showZipError(error)
       setMessage(error instanceof ApiError ? error.message : 'Tax calculation failed')
       return false
     }
   }
 
   async function onPay(values: CheckoutCustomerValues) {
-    if (!rows.length || invalidPrice || !shipping || !vehicle || !fitmentApproved) {
-      setMessage('Verify VIN, fitment and shipping before payment.')
+    if (!rows.length || invalidPrice || !shipping) {
+      setMessage('Choose a shipping method before payment.')
+      return
+    }
+    if (!vinReady) {
+      setMessage('Verify the VIN you entered, or clear it, before payment.')
       return
     }
     const selection = toShippingSelection(shipping)
@@ -238,7 +267,7 @@ export function CheckoutPage() {
       const result = await createCheckout({
         items: cartItems,
         shipping: selection,
-        vehicle,
+        ...(typedVin && vehicle ? { vehicle } : {}),
         customer: {
           ...values,
           state: values.state.toUpperCase(),
@@ -249,6 +278,7 @@ export function CheckoutPage() {
       window.location.assign(result.url)
     } catch (error) {
       setPaying(false)
+      showZipError(error)
       setMessage(error instanceof ApiError ? error.message : String((error as Error).message))
     }
   }
@@ -260,7 +290,7 @@ export function CheckoutPage() {
       </StorefrontButton>
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">Cart & Secure Checkout</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Review your parts, verify the VIN, confirm shipping and tax, then continue to the payment
+        Review your parts, optionally verify your VIN, confirm shipping and tax, then continue to the payment
         provider&apos;s secure page.
       </p>
       {rows.length ? (
@@ -365,24 +395,50 @@ export function CheckoutPage() {
 
           <Card>
             <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base">2. Vehicle / VIN Verification</CardTitle>
+              <CardTitle className="text-base">2. Vehicle / VIN Verification (optional)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-2">
               {/* El botón va debajo: al lado recortaba los 17 caracteres. */}
               <FormField
                 id="checkout-vin"
-                label="VIN"
+                label="VIN (optional)"
                 value={vin}
                 onChange={(event) => setVin(event.target.value.toUpperCase())}
+                hint={
+                  <p className="text-xs text-muted-foreground">
+                    Adding your VIN lets us verify fitment before your parts ship.
+                  </p>
+                }
                 maxLength={17}
                 placeholder="17-character VIN"
                 spellCheck={false}
                 autoComplete="off"
                 className="h-11 font-mono text-base tracking-wide md:text-base"
               />
-              <StorefrontButton type="button" onClick={() => void onVerifyVin()}>
-                Verify VIN
-              </StorefrontButton>
+              <div className="flex flex-wrap gap-2">
+                <StorefrontButton type="button" disabled={!typedVin} onClick={() => void onVerifyVin()}>
+                  Verify VIN
+                </StorefrontButton>
+                {vin ? (
+                  <StorefrontButton
+                    type="button"
+                    tone="outline"
+                    onClick={() => {
+                      setVin('')
+                      setVehicle(null)
+                      setFitment(null)
+                      setMessage('')
+                    }}
+                  >
+                    Clear VIN
+                  </StorefrontButton>
+                ) : null}
+              </div>
+              {typedVin && vehicle?.vin !== typedVin ? (
+                <p className="text-sm text-muted-foreground">
+                  Verify this VIN to continue, or clear it to check out without one.
+                </p>
+              ) : null}
               {vehicle ? (
                 <p className="text-sm">
                   VIN verified: {vehicle.year} {vehicle.make} {vehicle.model}
@@ -412,15 +468,30 @@ export function CheckoutPage() {
             </CardHeader>
             <CardContent className="p-4 pt-2">
               <div className="grid gap-3 md:grid-cols-2">
-                {CUSTOMER_FIELDS.map(([field, label]) => (
-                  <FormField
-                    key={field}
-                    id={field}
-                    label={label}
-                    readOnly={field === 'email' && Boolean(accountEmail)}
-                    {...form.register(field)}
-                  />
-                ))}
+                {CUSTOMER_FIELDS.map(([field, label]) =>
+                  // Un select y no texto libre: el backend solo acepta códigos de
+                  // la lista y el estado decide si se cobra impuesto.
+                  field === 'state' ? (
+                    <SelectField
+                      key={field}
+                      id={field}
+                      label={label}
+                      options={US_STATE_OPTIONS}
+                      autoComplete="address-level1"
+                      error={form.formState.errors.state?.message}
+                      {...form.register(field)}
+                    />
+                  ) : (
+                    <FormField
+                      key={field}
+                      id={field}
+                      label={label}
+                      readOnly={field === 'email' && Boolean(accountEmail)}
+                      error={form.formState.errors[field]?.message}
+                      {...form.register(field)}
+                    />
+                  ),
+                )}
               </div>
 
               <h2 className="mt-6 text-base font-semibold">Shipping Method</h2>
@@ -500,7 +571,7 @@ export function CheckoutPage() {
               <StorefrontButton
                 type="submit"
                 className="rounded-full bg-amber-400 text-neutral-950 hover:bg-amber-500"
-                disabled={!rows.length || invalidPrice || !shipping || !fitmentApproved || paying}
+                disabled={!rows.length || invalidPrice || !shipping || !vinReady || paying}
               >
                 {paying ? 'Preparing payment…' : 'Continue to Secure Card Payment'}
               </StorefrontButton>
