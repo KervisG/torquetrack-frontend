@@ -1,7 +1,8 @@
-import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, Wrench } from 'lucide-react'
+import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, matchPath, useLocation } from 'react-router-dom'
 
+import { BrandMark } from '@/components/brand-mark'
 import { FormError } from '@/components/form-error'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
@@ -149,8 +150,9 @@ function Brand({
         onClick={onNavigate}
         className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/70"
       >
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-foreground text-primary">
-          <Wrench className="size-4" aria-hidden="true" />
+        {/* Variante small a 32x18 px exactos: los trazos caen en píxeles enteros. */}
+        <span className="flex size-8 shrink-0 items-center justify-center">
+          <BrandMark variant="small" className="h-[18px] w-8 text-primary-foreground" />
         </span>
         <span className={cn('leading-tight', collapsed && 'sr-only')}>
           <span className="block text-sm font-semibold">TorqueTrack</span>

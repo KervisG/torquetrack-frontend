@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
+import { BrandMark } from '@/components/brand-mark'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 
 type AuthCardProps = {
@@ -26,7 +27,10 @@ export function AuthCard({ title, description, children, footer }: AuthCardProps
       <div className="flex items-center bg-background px-4 py-8">
         <Card className="w-full border-0 shadow-none">
           <CardHeader>
-            <p className="text-sm font-semibold tracking-wide text-muted-foreground">TorqueTrack</p>
+            <p className="flex items-center gap-2 text-sm font-semibold tracking-wide text-muted-foreground">
+              <BrandMark variant="small" className="h-[18px] w-8 text-neutral-950" />
+              TorqueTrack
+            </p>
             <h1 className="text-2xl font-semibold">{title}</h1>
             <CardDescription>{description}</CardDescription>
           </CardHeader>

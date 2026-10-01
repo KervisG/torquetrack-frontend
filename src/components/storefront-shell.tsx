@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 
+import { BrandMark } from '@/components/brand-mark'
 import { CartPriceNotices } from '@/components/cart-price-notices'
 import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontAccountMenu } from '@/components/storefront-account-menu'
@@ -54,7 +55,7 @@ export function StorefrontShell() {
       <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/85 text-white backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
-            <BrandMark />
+            <BrandMark className="h-6 w-auto text-white" />
             <span className="leading-none">
               <span className="block text-[13px] font-semibold tracking-[0.16em]">TORQUETRACK</span>
               <span className="mt-1 block text-[10px] font-medium tracking-[0.32em] text-amber-400">
@@ -212,18 +213,6 @@ export function StorefrontShell() {
         </SheetContent>
       </Sheet>
     </div>
-  )
-}
-
-// Monograma provisional de dos T. Se cambia cuando llegue el logo encargado.
-function BrandMark() {
-  return (
-    <span className="grid size-8 shrink-0 place-items-center bg-amber-500 text-neutral-950" aria-hidden>
-      <svg viewBox="0 0 28 20" className="h-3.5 w-5" fill="currentColor">
-        <path d="M0 0h12v3.2H7.6V20H4.4V3.2H0V0z" />
-        <path d="M16 0h12v3.2H23.6V20H20.4V3.2H16V0z" />
-      </svg>
-    </span>
   )
 }
 
