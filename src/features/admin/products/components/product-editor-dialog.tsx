@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
@@ -164,7 +165,15 @@ export function ProductEditorDialog({
               <FormField id="product-engine" label="Engine" {...form.register('engine')} />
             </div>
             <FormField id="product-fitment" label="Fitment notes" {...form.register('fitment')} />
-            <FormField id="product-description" label="Description" {...form.register('description')} />
+            <div className="space-y-2">
+              <Label htmlFor="product-description">Description</Label>
+              <textarea
+                id="product-description"
+                rows={5}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                {...form.register('description')}
+              />
+            </div>
             <FormField id="product-warranty" label="Warranty" {...form.register('warranty')} />
           </fieldset>
           <fieldset className="space-y-4" disabled={!canEditPricing}>
