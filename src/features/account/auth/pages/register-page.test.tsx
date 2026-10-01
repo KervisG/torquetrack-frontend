@@ -10,7 +10,6 @@ import { renderApp } from '@/test/render-app'
 async function fillForm(overrides: { confirm?: string } = {}) {
   const user = userEvent.setup()
   await user.type(await screen.findByLabelText('Full name'), 'Pat Fleet')
-  await user.type(screen.getByLabelText('Company (optional)'), 'Fleet LLC')
   await user.type(screen.getByLabelText('Phone (optional)'), '555-0100')
   await user.type(screen.getByLabelText('Email'), 'pat@example.com')
   await user.type(screen.getByLabelText('Password'), 'diesel-pass-123')
@@ -38,9 +37,9 @@ describe('RegisterPage', () => {
     expect(await screen.findByText('Check your email to verify your account.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'sign in' })).toHaveAttribute('href', '/login')
     expect(screen.queryByRole('heading', { name: 'Profile' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/company/i)).not.toBeInTheDocument()
     expect(sent).toEqual({
       name: 'Pat Fleet',
-      company: 'Fleet LLC',
       phone: '555-0100',
       email: 'pat@example.com',
       password: 'diesel-pass-123',

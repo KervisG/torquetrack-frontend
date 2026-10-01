@@ -25,7 +25,6 @@ export function login(values: LoginValues): Promise<Session> {
 // su contraseña desde `/login`.
 export function register(payload: {
   name: string
-  company: string
   phone: string
   email: string
   password: string

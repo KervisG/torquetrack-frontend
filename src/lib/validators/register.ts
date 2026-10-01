@@ -5,7 +5,6 @@ import { newPasswordFields, passwordMismatch, passwordsMatch } from './new-passw
 export const registerSchema = z
   .object({
     name: z.string().trim().min(1, 'Full name required'),
-    company: z.string().trim(),
     phone: z.string().trim(),
     email: z.email('Valid email required'),
     ...newPasswordFields,

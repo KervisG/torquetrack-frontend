@@ -16,7 +16,6 @@ export function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: '',
-      company: '',
       phone: '',
       email: '',
       password: '',
@@ -56,8 +55,8 @@ export function RegisterPage() {
         <form
           className="space-y-4"
           noValidate
-          onSubmit={form.handleSubmit(({ name, company, phone, email, password }) =>
-            register.mutate({ name, company, phone, email, password }),
+          onSubmit={form.handleSubmit(({ name, phone, email, password }) =>
+            register.mutate({ name, phone, email, password }),
           )}
         >
           <FormField
@@ -66,12 +65,6 @@ export function RegisterPage() {
             autoComplete="name"
             error={errors.name?.message}
             {...form.register('name')}
-          />
-          <FormField
-            id="company"
-            label="Company (optional)"
-            autoComplete="organization"
-            {...form.register('company')}
           />
           <FormField
             id="phone"
