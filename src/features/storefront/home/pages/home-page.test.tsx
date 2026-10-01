@@ -33,6 +33,8 @@ describe('Storefront home', () => {
     server.use(authenticatedSession(customerUser), productsOk())
     renderApp('/')
 
+    const user = userEvent.setup()
+    await user.click(await header().findByRole('button', { name: 'Account menu' }))
     expect(await header().findByRole('link', { name: 'My account' })).toHaveAttribute(
       'href',
       '/account',
@@ -45,6 +47,8 @@ describe('Storefront home', () => {
     server.use(authenticatedSession(sessionUser), productsOk())
     renderApp('/')
 
+    const user = userEvent.setup()
+    await user.click(await header().findByRole('button', { name: 'Account menu' }))
     expect(await header().findByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin')
   })
 
@@ -65,7 +69,8 @@ describe('Storefront home', () => {
     renderApp('/')
 
     const user = userEvent.setup()
-    await user.click(await header().findByRole('button', { name: 'Sign out' }))
+    await user.click(await header().findByRole('button', { name: 'Account menu' }))
+    await user.click(header().getByRole('button', { name: 'Sign out' }))
 
     expect(await header().findByRole('link', { name: 'Sign in' })).toBeInTheDocument()
   })

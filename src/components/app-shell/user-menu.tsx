@@ -1,8 +1,9 @@
 import { ChevronDown, LogOut, Store } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
+import { useDismissableMenu } from '@/components/use-dismissable-menu'
 
 export type ShellUser = {
   name: string
@@ -31,28 +32,8 @@ const itemClass =
 // Patrón de disclosure (no `role="menu"`): los enlaces y botones del panel se
 // recorren con Tab como cualquier otro control.
 export function UserMenu({ user, onSignOut, signingOut }: UserMenuProps) {
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const { open, toggle, close, rootRef, triggerRef } = useDismissableMenu()
   const panelId = useId()
-
-  useEffect(() => {
-    if (!open) return
-    function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return
-      setOpen(false)
-      triggerRef.current?.focus()
-    }
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
 
   return (
     <div ref={rootRef} className="relative">
@@ -62,7 +43,7 @@ export function UserMenu({ user, onSignOut, signingOut }: UserMenuProps) {
         aria-label="Account menu"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <span
@@ -87,7 +68,7 @@ export function UserMenu({ user, onSignOut, signingOut }: UserMenuProps) {
             </Badge>
           </div>
           <div className="my-1 h-px bg-border" />
-          <Link to="/" className={itemClass} onClick={() => setOpen(false)}>
+          <Link to="/" className={itemClass} onClick={close}>
             <Store className="size-4" aria-hidden="true" />
             Back to store
           </Link>

@@ -5,6 +5,7 @@ import { Link, Outlet } from 'react-router-dom'
 
 import { CartPriceNotices } from '@/components/cart-price-notices'
 import { CartQuantityLimit } from '@/components/cart-quantity-limit'
+import { StorefrontAccountMenu } from '@/components/storefront-account-menu'
 import { StorefrontButton } from '@/components/storefront-button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -16,7 +17,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useSession } from '@/features/account/auth/hooks/use-session'
-import { useSignOut } from '@/features/account/auth/hooks/use-sign-out'
 import { listProducts } from '@/features/storefront/catalog/api'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { formatMoney } from '@/lib/money'
@@ -62,13 +62,8 @@ export function StorefrontShell() {
               </span>
             </span>
           </Link>
+          {/* El logo ya lleva al catálogo y al checkout se llega desde el carrito. */}
           <nav className="flex items-center gap-1 sm:gap-2" aria-label="Store">
-            <Link to="/" className={navLink}>
-              Shop
-            </Link>
-            <Link to="/checkout" className={`${navLink} hidden sm:inline`}>
-              Checkout
-            </Link>
             <AccountNav />
             <StorefrontButton
               type="button"
@@ -235,11 +230,10 @@ function BrandMark() {
 const navLink =
   'shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-white/75 transition-colors hover:bg-white/10 hover:text-white'
 
-// Con sesión se ofrece el portal (y el panel si la cuenta tiene Role); sin
-// sesión, un solo acceso para clientes y staff.
+// Con sesión, un solo menú de cuenta (portal, panel si la cuenta tiene Role y
+// salida); sin sesión, un solo acceso para clientes y staff.
 function AccountNav() {
   const session = useSession()
-  const signOut = useSignOut()
   const user = session.data?.user
 
   if (!user) {
@@ -250,25 +244,5 @@ function AccountNav() {
     )
   }
 
-  return (
-    <>
-      <Link to="/account" className={navLink}>
-        My account
-      </Link>
-      {user.isStaff ? (
-        <Link to="/admin" className={navLink}>
-          Admin
-        </Link>
-      ) : null}
-      <StorefrontButton
-        type="button"
-        tone="link"
-        className="h-auto shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-white/75 hover:bg-white/10 hover:text-white hover:no-underline"
-        onClick={() => signOut.mutate()}
-        disabled={signOut.isPending}
-      >
-        Sign out
-      </StorefrontButton>
-    </>
-  )
+  return <StorefrontAccountMenu user={user} />
 }
