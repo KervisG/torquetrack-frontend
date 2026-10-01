@@ -130,6 +130,14 @@ export type CatalogCategory = {
   label: string
 }
 
+// Postratamiento de escape controlado por EPA/CARB: estas piezas llevan el
+// aviso legal de emisiones en la ficha del producto.
+const EMISSIONS_CATEGORIES = new Set(['DPF', 'DOC', 'SCR'])
+
+export function isEmissionsCategory(category: unknown): boolean {
+  return EMISSIONS_CATEGORIES.has(canonicalCategory(category))
+}
+
 export function categoryLabel(category: string): string {
   const canonical = canonicalCategory(category)
   return CATEGORY_LABELS[canonical] || category.trim()

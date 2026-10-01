@@ -5,7 +5,7 @@ import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontButton } from '@/components/storefront-button'
 import { getProduct } from '@/features/storefront/catalog/api'
 import { ProductPhoto } from '@/features/storefront/catalog/components/product-photo'
-import { categoryLabel } from '@/features/storefront/catalog/filter-products'
+import { categoryLabel, isEmissionsCategory } from '@/features/storefront/catalog/filter-products'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { ApiError } from '@/lib/api-client'
 import { formatMoney, hasListedPrice } from '@/lib/money'
@@ -74,6 +74,7 @@ export function ProductPage() {
           {item.condition ? <Chip>{item.condition}</Chip> : null}
         </div>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-950">{item.title}</h1>
+        {isEmissionsCategory(item.category) ? <EmissionsNotice /> : null}
         <div className="mt-8 space-y-8">
           <DetailGrid
             title="Fitment"
@@ -114,7 +115,7 @@ export function ProductPage() {
               <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 Description
               </h2>
-              <p className="mt-3 text-sm leading-6 text-neutral-600">{item.description}</p>
+              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-neutral-600">{item.description}</p>
             </section>
           ) : null}
         </div>
@@ -197,6 +198,30 @@ function BuyBox({
         Shipping is calculated at checkout, before you pay.
       </p>
     </aside>
+  )
+}
+
+function EmissionsNotice() {
+  return (
+    <section
+      aria-label="Emissions compliance notice"
+      className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+    >
+      <p className="font-semibold">Emissions equipment notice</p>
+      <p className="mt-1">
+        This part is sold for legal, emissions-compliant use only, to repair or replace factory
+        emissions equipment. It is not intended for the removal of, or tampering with, any
+        emissions control device.
+      </p>
+      <p className="mt-1">
+        This part may not be legal for sale or use in California (CARB) on pollution-controlled
+        vehicles.{' '}
+        <Link to="/policies/terms" className="font-medium underline underline-offset-4">
+          See our Terms
+        </Link>
+        .
+      </p>
+    </section>
   )
 }
 
