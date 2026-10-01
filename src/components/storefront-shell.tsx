@@ -1,4 +1,4 @@
-import { ShoppingCart } from 'lucide-react'
+import { Phone, ShoppingCart } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
@@ -20,7 +20,9 @@ import {
 import { useSession } from '@/features/account/auth/hooks/use-session'
 import { listProducts } from '@/features/storefront/catalog/api'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
+import { POLICY_PAGES } from '@/features/storefront/policies/policy-values'
 import { formatMoney } from '@/lib/money'
+import { STORE_EMAIL, STORE_PHONE } from '@/lib/store-contact'
 import { MAX_CART_QUANTITY, syncCartOwner, useCartStore } from '@/stores/cart-store'
 
 export function StorefrontShell() {
@@ -65,6 +67,10 @@ export function StorefrontShell() {
           </Link>
           {/* El logo ya lleva al catálogo y al checkout se llega desde el carrito. */}
           <nav className="flex items-center gap-1 sm:gap-2" aria-label="Store">
+            <a href={STORE_PHONE.href} className={`${navLink} inline-flex items-center`} aria-label={`Call ${STORE_PHONE.display}`}>
+              <Phone className="inline size-4 sm:mr-1.5" />
+              <span className="max-sm:hidden">{STORE_PHONE.display}</span>
+            </a>
             <AccountNav />
             <StorefrontButton
               type="button"
@@ -83,11 +89,14 @@ export function StorefrontShell() {
       </header>
       <Outlet />
       <footer className="mt-12 border-t bg-background">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-3">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="font-semibold">TorqueTrack Diesel</p>
-            <a className="mt-2 block text-sm text-sky-900 hover:underline" href="mailto:sales@torquetrackdiesel.com">
-              sales@torquetrackdiesel.com
+            <a className="mt-2 block text-sm text-sky-900 hover:underline" href={STORE_PHONE.href}>
+              {STORE_PHONE.display}
+            </a>
+            <a className="mt-2 block text-sm text-sky-900 hover:underline" href={`mailto:${STORE_EMAIL}`}>
+              {STORE_EMAIL}
             </a>
             <p className="mt-2 text-sm text-muted-foreground">Open 8:00 AM – 9:00 PM</p>
           </div>
@@ -100,9 +109,21 @@ export function StorefrontShell() {
           <div>
             <p className="font-semibold">Returns</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Email us before sending a part back. Fitment is confirmed at checkout.
+              Contact us before sending a part back. Fitment is confirmed at checkout.
             </p>
           </div>
+          <nav aria-label="Policies">
+            <p className="font-semibold">Policies</p>
+            <ul className="mt-2 space-y-2 text-sm">
+              {POLICY_PAGES.map((page) => (
+                <li key={page.to}>
+                  <Link to={page.to} className="text-sky-900 hover:underline">
+                    {page.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </footer>
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>

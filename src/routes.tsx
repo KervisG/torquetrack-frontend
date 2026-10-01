@@ -16,6 +16,11 @@ import { CheckoutPage } from '@/features/storefront/checkout/pages/checkout-page
 import { CheckoutSuccessPage } from '@/features/storefront/checkout/pages/checkout-success-page'
 import { NotFoundPage } from '@/features/storefront/errors/pages/not-found-page'
 import { RouteErrorPage } from '@/features/storefront/errors/pages/route-error-page'
+import { PoliciesPage } from '@/features/storefront/policies/pages/policies-page'
+import { PrivacyPolicyPage } from '@/features/storefront/policies/pages/privacy-policy-page'
+import { ReturnsPolicyPage } from '@/features/storefront/policies/pages/returns-policy-page'
+import { ShippingPolicyPage } from '@/features/storefront/policies/pages/shipping-policy-page'
+import { TermsPage } from '@/features/storefront/policies/pages/terms-page'
 import { ProductPage } from '@/features/storefront/product/pages/product-page'
 import { PublicQuotePage } from '@/features/storefront/quote/pages/public-quote-page'
 import { RequestQuotePage } from '@/features/storefront/quote/pages/request-quote-page'
@@ -47,6 +52,11 @@ export const appRoutes = [
           // Enlace del correo de la cotización: el token es el único control de
           // acceso, así que no exige sesión.
           { path: '/quote/:token', element: <PublicQuotePage /> },
+          { path: '/policies', element: <PoliciesPage /> },
+          { path: '/policies/shipping', element: <ShippingPolicyPage /> },
+          { path: '/policies/returns', element: <ReturnsPolicyPage /> },
+          { path: '/policies/privacy', element: <PrivacyPolicyPage /> },
+          { path: '/policies/terms', element: <TermsPage /> },
           // Cualquier URL que no coincide con otra ruta cae acá, con el header
           // de la tienda.
           { path: '*', element: <NotFoundPage /> },
