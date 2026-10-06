@@ -128,8 +128,12 @@ function toOrder(row: RawOrder): AdminOrder {
   }
 }
 
-export async function listOrders(): Promise<AdminOrder[]> {
-  const rows = await apiRequest<RawOrder[]>('/admin/orders')
+// `today` lo resuelve la API en la zona de la tienda (`STORE_TIME_ZONE`), el
+// mismo día de "Sales today"; el navegador no calcula la fecha.
+export type OrderDateFilter = 'today'
+
+export async function listOrders(date?: OrderDateFilter): Promise<AdminOrder[]> {
+  const rows = await apiRequest<RawOrder[]>(date ? `/admin/orders?date=${date}` : '/admin/orders')
   return rows.map(toOrder)
 }
 

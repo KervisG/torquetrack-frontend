@@ -1,11 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
+import { Package } from 'lucide-react'
 import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 
+import { EmptyState } from '@/components/empty-state'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { SelectField } from '@/components/select-field'
 import { PageHeader } from '@/components/app-shell/page-header'
+import { Button } from '@/components/ui/button'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
 
@@ -50,14 +54,8 @@ function customerOptions(orders: AdminOrder[]) {
   ]
 }
 
-// La API no filtra ni pagina: el listado completo se filtra en el cliente.
-function matches(
-  order: AdminOrder,
-  search: string,
-  status: string,
-  payment: string,
-  customer: string,
-): boolean {
+// La API solo filtra por día (`?date=today`) y no pagina: el resto se filtra en el cliente.
+function matches(order: AdminOrder, search: string, status: string, payment: string, customer: string): boolean {
   if (status !== 'ALL' && order.status !== status) return false
   if (payment !== 'ALL' && order.paymentStatus !== payment) return false
   if (customer !== 'ALL' && customerKey(order) !== customer) return false
@@ -84,15 +82,21 @@ export function OrdersPage() {
   const [status, setStatus] = useState('ALL')
   const [payment, setPayment] = useState('ALL')
   const [customer, setCustomer] = useState('ALL')
+  // `?date=today` viene de la tarjeta "Sales today" del dashboard; "hoy" lo
+  // resuelve la API en la zona de la tienda, no el navegador.
+  const [params, setParams] = useSearchParams()
+  const onlyToday = params.get('date') === 'today'
   const orders = useQuery({
-    queryKey: adminOrderKeys.list(),
-    queryFn: listOrders,
+    queryKey: onlyToday ? adminOrderKeys.listByDate('today') : adminOrderKeys.list(),
+    queryFn: () => listOrders(onlyToday ? 'today' : undefined),
     enabled: allowed,
   })
 
   const all = orders.data ?? []
-  const rows = [...all].reverse().filter((order) => matches(order, search, status, payment, customer))
-  const paged = usePagedRows(rows, `${search}|${status}|${payment}|${customer}`)
+  const rows = [...all]
+    .reverse()
+    .filter((order) => matches(order, search, status, payment, customer))
+  const paged = usePagedRows(rows, `${search}|${status}|${payment}|${customer}|${onlyToday}`)
 
   if (!allowed) {
     return <PermissionNotice title="Orders" message="You do not have permission to view orders." />
@@ -138,6 +142,23 @@ export function OrdersPage() {
             onChange={(event) => setPayment(event.target.value)}
           />
         </div>
+        {onlyToday ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="rounded-full border px-3 py-1">Placed today (store time)</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const next = new URLSearchParams(params)
+                next.delete('date')
+                setParams(next, { replace: true })
+              }}
+            >
+              Show all dates
+            </Button>
+          </div>
+        ) : null}
         {customer !== 'ALL' && rows[0] ? (
           // Cada pedido guarda su propia copia del cliente; al filtrar se muestra la más reciente.
           <section aria-label="Customer" className="rounded-lg border border-foreground/15 bg-background p-5">
@@ -151,6 +172,25 @@ export function OrdersPage() {
           <p className="text-sm text-muted-foreground">Loading orders…</p>
         ) : orders.error ? (
           <FormError error={orders.error} />
+        ) : !all.length && onlyToday ? (
+          <EmptyState
+            icon={Package}
+            title="No orders today"
+            description="Orders placed today in the store's time zone appear here."
+          />
+        ) : !all.length ? (
+          <EmptyState
+            icon={Package}
+            title="No orders yet"
+            description="Orders placed in the store or converted from quotes appear here."
+            action={
+              can('quotes.create') ? (
+                <Button asChild>
+                  <Link to="/admin/quotes?new=1">Create a quote</Link>
+                </Button>
+              ) : null
+            }
+          />
         ) : (
           <>
             <OrdersTable orders={paged.items} />

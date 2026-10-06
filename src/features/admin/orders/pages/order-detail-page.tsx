@@ -36,7 +36,7 @@ export function OrderDetailPage() {
   const allowed = can('orders.view')
   const orders = useQuery({
     queryKey: adminOrderKeys.list(),
-    queryFn: listOrders,
+    queryFn: () => listOrders(),
     enabled: allowed,
   })
 
