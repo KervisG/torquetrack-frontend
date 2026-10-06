@@ -2,14 +2,14 @@ import { http, HttpResponse } from 'msw'
 import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { productsOk, sampleProduct } from '@/test/catalog-handlers'
+import { productDetailOk, productsOk, sampleProduct } from '@/test/catalog-handlers'
 import { server } from '@/test/msw-server'
 import { renderApp } from '@/test/render-app'
 
 describe('ProductPage', () => {
   it('renders the product returned by the catalog', async () => {
-    server.use(productsOk())
-    renderApp(`/product/${sampleProduct.id}`)
+    server.use(productsOk(), productDetailOk())
+    renderApp(`/product/${sampleProduct.slug}`)
 
     expect(await screen.findByRole('heading', { name: sampleProduct.title })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add to cart/i })).toBeInTheDocument()
@@ -20,9 +20,7 @@ describe('ProductPage', () => {
   })
 
   it('offers a quote when the product has no price', async () => {
-    server.use(
-      http.get('/api/products/', () => HttpResponse.json([{ ...sampleProduct, price: 0 }])),
-    )
+    server.use(productsOk(), productDetailOk({ ...sampleProduct, price: 0 }))
     renderApp(`/product/${sampleProduct.id}`)
 
     expect(await screen.findByText('Price on request')).toBeInTheDocument()
@@ -31,7 +29,7 @@ describe('ProductPage', () => {
   })
 
   it('shows not found when the id is missing from the catalog', async () => {
-    server.use(productsOk())
+    server.use(productsOk(), productDetailOk())
     renderApp('/product/missing-id')
 
     expect(await screen.findByRole('heading', { name: 'Product not found' })).toBeInTheDocument()
@@ -39,7 +37,8 @@ describe('ProductPage', () => {
 
   it('shows the API error when products fail to load', async () => {
     server.use(
-      http.get('/api/products/', () =>
+      productsOk(),
+      http.get('/api/products/:idOrSlug/', () =>
         HttpResponse.json({ error: 'Unable to load products.' }, { status: 502 }),
       ),
     )

@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { Navigate } from 'react-router-dom'
 
+import { PageViewTracker } from '@/components/page-view-tracker'
 import { StorefrontShell } from '@/components/storefront-shell'
 import { AccountAuthGuard } from '@/features/account/auth/components/account-auth-guard'
 import { GuestGuard } from '@/features/account/auth/components/guest-guard'
@@ -40,13 +41,18 @@ export const appRoutes = [
     // Ruta raíz sin path: su errorElement atrapa lo que falle en cualquier
     // página, incluso la carga de una ruta lazy.
     errorElement: <RouteErrorPage />,
+    element: <PageViewTracker />,
     children: [
       {
         element: <StorefrontShell />,
         children: [
           { path: '/', element: <CatalogPage /> },
-          { path: '/product/:id', element: <ProductPage /> },
+          // Acepta el slug (el que enlaza la tienda) o el id de los enlaces viejos.
+          { path: '/product/:idOrSlug', element: <ProductPage /> },
           { path: '/checkout', element: <CheckoutPage /> },
+          // Destino de los correos de carrito abandonado: el checkout ya lista
+          // las líneas del carrito, que se lee del backend al montar la tienda.
+          { path: '/cart', element: <Navigate to="/checkout" replace /> },
           { path: '/checkout-success', element: <CheckoutSuccessPage /> },
           { path: '/quote', element: <RequestQuotePage /> },
           // Enlace del correo de la cotización: el token es el único control de
