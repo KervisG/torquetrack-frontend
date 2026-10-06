@@ -31,7 +31,7 @@ describe('CheckoutPage', () => {
     expect(screen.getByLabelText('Full name')).toHaveValue('')
   })
 
-  it('asks for new shipping rates when the cart changes', async () => {
+  it('quotes shipping automatically and quotes again when the cart changes', async () => {
     const user = userEvent.setup()
     useCartStore.setState({ items: [{ id: sampleProduct.id, qty: 1 }], shipping: null })
     let quotedItems: unknown
@@ -46,6 +46,7 @@ describe('CheckoutPage', () => {
           overnight: null,
         })
       }),
+      http.post('/api/tax/estimate/', () => HttpResponse.json({ tax: 0, source: 'No sales tax' })),
     )
     renderApp('/checkout')
 
@@ -54,17 +55,19 @@ describe('CheckoutPage', () => {
     await user.type(screen.getByLabelText('City'), 'Tampa')
     await user.selectOptions(screen.getByLabelText('State'), 'FL')
     await user.type(screen.getByLabelText('ZIP'), '33601')
-    await user.click(screen.getByRole('button', { name: 'Get Shipping Rates' }))
-    await user.click(await screen.findByRole('button', { name: 'Use this rate' }))
 
+    // Con la dirección completa se cotiza sola y se elige la tarifa más barata.
+    expect(await screen.findByRole('button', { name: 'Selected' })).toBeInTheDocument()
     expect(quotedItems).toEqual([{ id: sampleProduct.id, qty: 1 }])
     expect(useCartStore.getState().shipping?.id).toBe('rate_ground')
 
-    await user.click(screen.getByRole('button', { name: '+' }))
+    await user.click(screen.getByRole('button', { name: `Increase ${sampleProduct.title}` }))
 
-    // La tarifa y las opciones eran de una unidad; con dos hay que cotizar de nuevo.
+    // La tarifa y las opciones eran de una unidad; con dos se vuelve a cotizar.
     expect(useCartStore.getState().shipping).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Use this rate' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Selected' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Selected' })).toBeInTheDocument()
+    expect(quotedItems).toEqual([{ id: sampleProduct.id, qty: 2 }])
   })
 
   it('prefills the signed-in customer and locks the account email', async () => {
@@ -75,7 +78,8 @@ describe('CheckoutPage', () => {
     const email = screen.getByLabelText('Email')
     expect(email).toHaveValue('pat@example.com')
     expect(email).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Phone')).toHaveValue('555-0100')
+    // El perfil guarda `555-0100` (7 dígitos): no se precarga un teléfono inválido.
+    expect(screen.getByLabelText('Phone')).toHaveValue('')
     expect(screen.getByLabelText('Street address')).toHaveValue('100 Main St')
     expect(screen.getByLabelText('City')).toHaveValue('Tampa')
     expect(screen.getByLabelText('State')).toHaveValue('FL')

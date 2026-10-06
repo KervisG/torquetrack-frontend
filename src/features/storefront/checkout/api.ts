@@ -13,29 +13,37 @@ import type {
 
 // El paquete (peso y medidas) lo arma el backend desde el catálogo; un peso
 // mandado por el navegador cotizaría un envío más barato.
-export function getShippingRates(payload: {
-  to: Record<string, string>
-  items: Array<{ id: string; qty: number }>
-}): Promise<ShippingRatesResponse> {
+export function getShippingRates(
+  payload: {
+    to: Record<string, string>
+    items: Array<{ id: string; qty: number }>
+  },
+  signal?: AbortSignal,
+): Promise<ShippingRatesResponse> {
   return apiRequest<ShippingRatesResponse>('/shipping/rates', {
     method: 'POST',
     body: JSON.stringify(payload),
+    signal,
   })
 }
 
-export function estimateTax(payload: {
-  amount: number
-  core: number
-  shipping: number
-  subtotal: number
-  state: string
-  zip: string
-  city: string
-  address1: string
-}): Promise<TaxEstimate> {
+export function estimateTax(
+  payload: {
+    amount: number
+    core: number
+    shipping: number
+    subtotal: number
+    state: string
+    zip: string
+    city: string
+    address1: string
+  },
+  signal?: AbortSignal,
+): Promise<TaxEstimate> {
   return apiRequest<TaxEstimate>('/tax/estimate', {
     method: 'POST',
     body: JSON.stringify(payload),
+    signal,
   })
 }
 
