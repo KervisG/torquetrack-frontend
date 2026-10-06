@@ -1,0 +1,34 @@
+#!/bin/sh
+# Completa el host de BACKEND_UPSTREAM con el dominio de búsqueda que lo
+# resuelve. El `resolver` de nginx consulta el nombre tal cual y, a diferencia
+# de la libc, no aplica los `search` de /etc/resolv.conf: un nombre corto como
+# el host interno de Render (`torquetrack-backend-xxxx`) no resolvería.
+#
+# /docker-entrypoint.sh lo carga con `.` (por la extensión .envsh) después de
+# 15-local-resolvers.envsh y antes de 20-envsubst-on-templates.sh, así el
+# template recibe el valor ya completo. Al cargarse en el mismo shell no usa
+# `exit` y sus variables llevan prefijo para no pisar las del entrypoint.
+
+tt_host=${BACKEND_UPSTREAM%:*}
+tt_port=${BACKEND_UPSTREAM##*:}
+
+case "$tt_host" in
+    # IP o nombre que ya trae dominio: se usa tal cual.
+    *.*|"") ;;
+    *)
+        for tt_domain in $(awk '$1 == "search" { for (i = 2; i <= NF; i++) print $i }' /etc/resolv.conf); do
+            # El punto final pide el nombre absoluto, sin volver a sumarle los
+            # `search`, y confirma que este dominio es el que lo resuelve.
+            if getent hosts "$tt_host.$tt_domain." >/dev/null 2>&1 </dev/null; then
+                export BACKEND_UPSTREAM="$tt_host.$tt_domain:$tt_port"
+                break
+            fi
+        done
+        ;;
+esac
+
+# Sin dominio que lo resuelva (docker compose: el DNS de Docker sí responde el
+# nombre corto) queda el valor original.
+entrypoint_log "18-backend-upstream.envsh: BACKEND_UPSTREAM=$BACKEND_UPSTREAM"
+
+unset tt_host tt_port tt_domain

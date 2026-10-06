@@ -1,0 +1,4 @@
+# El contenedor de nginx ejecuta estos archivos con sh: con CRLF (checkout en
+# Windows con core.autocrlf) el script de entrypoint falla.
+nginx/** text eol=lf
+Dockerfile text eol=lf

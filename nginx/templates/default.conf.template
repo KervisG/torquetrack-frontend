@@ -1,43 +1,27 @@
 # La imagen oficial de nginx renderiza este template con envsubst al arrancar
 # y lo deja en /etc/nginx/conf.d/, dentro del bloque `http`. Solo se sustituyen
-# BACKEND_UPSTREAM y CLOUDFLARE_ONLY (NGINX_ENVSUBST_FILTER en el Dockerfile);
-# las variables propias de nginx ($host, $remote_addr...) llegan intactas.
+# BACKEND_UPSTREAM, PORT y NGINX_LOCAL_RESOLVERS (NGINX_ENVSUBST_FILTER en el
+# Dockerfile); las variables propias de nginx ($host, $remote_addr...) llegan
+# intactas.
 
 server_tokens off;
 
-# Cloudflare termina TLS y reenvía la IP del cliente en CF-Connecting-IP. Solo
-# se le cree a ese header si la conexión viene de un rango de Cloudflare; desde
-# ahí en adelante $remote_addr es el cliente real.
-include /etc/nginx/cloudflare/realip.conf;
-real_ip_header CF-Connecting-IP;
+# El proxy de Render termina TLS y manda la IP del cliente en X-Forwarded-For.
+# No se usa realip: Render no publica los rangos de sus proxies, y sin ellos
+# no hay forma segura de decidir a qué entrada del header creerle. Por eso
+# $remote_addr es la IP del proxy, y la del cliente la resuelve Django con
+# NUM_PROXIES sobre X-Forwarded-For.
 
-# Después de realip, $remote_addr ya es el cliente, así que allow/deny miraría
-# la IP equivocada. $realip_remote_addr conserva la IP de la conexión TCP (el
-# nodo de Cloudflare). El loopback se admite para el healthcheck del contenedor.
-geo $realip_remote_addr $from_cloudflare {
-    default 0;
-    include /etc/nginx/cloudflare/geo.conf;
-    127.0.0.1 1;
-    ::1 1;
-}
-
-# Solo CLOUDFLARE_ONLY=off (exacto) desactiva la restricción, para probar en
-# local. Cualquier otro valor, incluido un error de tipeo, la deja activa.
-map "${CLOUDFLARE_ONLY}:$from_cloudflare" $origin_denied {
-    default 1;
-    "~^off:" 0;
-    "~:1$" 0;
-}
-
-# Cloudflare manda el esquema original; sin el header (pruebas en local) se
-# usa el de la conexión.
+# El proxy que termina TLS manda el esquema original; sin el header (pruebas
+# en local) se usa el de la conexión.
 map $http_x_forwarded_proto $forwarded_proto {
     default $http_x_forwarded_proto;
     "" $scheme;
 }
 
-# Primera capa de tope por IP del cliente real; los throttles de DRF siguen
-# siendo la segunda capa, por ruta.
+# Primera capa de tope por IP de la conexión; los throttles de DRF siguen
+# siendo la segunda capa, por ruta y por IP del cliente. Sin realip, la IP de
+# la conexión es la del proxy de Render: varios clientes pueden compartir tope.
 limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
 
 # Login del admin de Django: Django no limita sus intentos, así que sin esto
@@ -50,15 +34,24 @@ map $request_method $admin_login_key {
 limit_req_zone $admin_login_key zone=admin_login:10m rate=5r/m;
 limit_req_status 429;
 
-upstream django {
-    server ${BACKEND_UPSTREAM};
-    keepalive 16;
-}
+# DNS del contenedor, leído de /etc/resolv.conf al arrancar por
+# 15-local-resolvers.envsh de la imagen (NGINX_ENTRYPOINT_LOCAL_RESOLVERS en el
+# Dockerfile). `valid` acota cuánto vive una IP en caché: tras un deploy o un
+# reinicio del backend, el proxy toma la nueva en segundos. Sin IPv6 porque la
+# red privada de Render es IPv4.
+resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+resolver_timeout 5s;
 
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    # Render asigna el puerto en PORT (10000 por defecto); el Dockerfile deja
+    # 80 para docker run en local.
+    listen ${PORT} default_server;
+    listen [::]:${PORT} default_server;
     server_name _;
+
+    # host:puerto de gunicorn; proxy-backend.conf lo usa en `proxy_pass`. Ya
+    # trae el dominio de búsqueda que agrega 18-backend-upstream.envsh.
+    set $django_upstream ${BACKEND_UPSTREAM};
 
     root /usr/share/nginx/html;
     index index.html;
@@ -74,10 +67,6 @@ server {
     gzip_min_length 1024;
     gzip_types text/plain text/css application/javascript application/json
                application/xml image/svg+xml;
-
-    if ($origin_denied) {
-        return 403;
-    }
 
     location = /nginx-health {
         access_log off;
@@ -97,6 +86,13 @@ server {
     }
 
     location = /api/health/ {
+        include /etc/nginx/snippets/proxy-backend.conf;
+    }
+
+    # El sitemap lo genera Django en /api/sitemap.xml; los buscadores lo piden
+    # en la raíz del dominio.
+    location = /sitemap.xml {
+        rewrite ^ /api/sitemap.xml break;
         include /etc/nginx/snippets/proxy-backend.conf;
     }
 
