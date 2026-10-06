@@ -19,6 +19,9 @@ function entry(id: number, action: string) {
   }
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('ActivityPage', () => {
   it('lists recent activity', async () => {
     server.use(
@@ -29,7 +32,7 @@ describe('ActivityPage', () => {
     )
     renderApp('/admin/activity')
 
-    expect(await screen.findByRole('heading', { name: 'Activity' })).toBeInTheDocument()
+    expect(await screen.findByText('Activity', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     const row = within((await screen.findByText('QUOTE_CONVERTED')).closest('tr') as HTMLElement)
     expect(row.getByText('ada@example.com')).toBeInTheDocument()
     expect(row.getByText('QUOTE · QID1')).toBeInTheDocument()

@@ -96,12 +96,15 @@ function rowFor(email: string) {
   return screen.getByText(email).closest('tr') as HTMLElement
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('UsersPage', () => {
   it('sends an anonymous visitor to sign in', async () => {
     server.use(unauthorizedSession())
     renderApp('/admin/users')
 
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(await screen.findByText('Sign in', { selector: 'h1, h2, h3' })).toBeInTheDocument()
   })
 
   it('blocks staff without users.manage and never calls the API', async () => {
@@ -124,7 +127,7 @@ describe('UsersPage', () => {
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/users')
 
-    expect(await screen.findByRole('heading', { name: 'Users' })).toBeInTheDocument()
+    expect(await screen.findByText('Users', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     await screen.findByText('sam@example.com')
     expect(within(rowFor('sam@example.com')).getByText('Sales')).toBeInTheDocument()
     expect(within(rowFor('pat@example.com')).getByText('Customer')).toBeInTheDocument()
@@ -139,7 +142,7 @@ describe('UsersPage', () => {
     const user = userEvent.setup()
     await screen.findByText('sam@example.com')
     await user.click(within(rowFor('sam@example.com')).getByRole('button', { name: 'Edit' }))
-    const form = within(await screen.findByRole('form', { name: 'Edit sam@example.com' }))
+    const form = within(await screen.findByLabelText('Edit sam@example.com', { selector: 'form' }))
     await user.selectOptions(await form.findByLabelText('Role'), '')
     await user.click(form.getByLabelText('Active'))
     await user.click(form.getByRole('button', { name: 'Save changes' }))
@@ -170,7 +173,7 @@ describe('UsersPage', () => {
     const user = userEvent.setup()
     await screen.findByText('sam@example.com')
     await user.click(within(rowFor('sam@example.com')).getByRole('button', { name: 'Edit' }))
-    const form = within(await screen.findByRole('form', { name: 'Edit sam@example.com' }))
+    const form = within(await screen.findByLabelText('Edit sam@example.com', { selector: 'form' }))
     await user.selectOptions(await form.findByLabelText('Role'), 'admin')
     await user.click(form.getByRole('button', { name: 'Save changes' }))
 

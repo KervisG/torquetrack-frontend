@@ -17,6 +17,9 @@ function staffWith(permissions: string[]) {
   })
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('QuoteEditorPage', () => {
   it('blocks staff without quotes.create', async () => {
     const backend = quotesBackend([])
@@ -36,7 +39,7 @@ describe('QuoteEditorPage', () => {
     renderApp('/admin/quotes/new')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Quote' }))
+    const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     await user.type(form.getByLabelText('Customer name'), 'Nia New')
     await user.type(form.getByLabelText('Customer email'), 'nia@example.com')
     await user.type(form.getByLabelText('VIN'), '1FTSW21P')
@@ -53,7 +56,7 @@ describe('QuoteEditorPage', () => {
     await user.click(form.getByRole('button', { name: 'Save quote' }))
 
     // Tras guardar se abre el detalle con los totales que calculó el backend.
-    expect(await screen.findByRole('heading', { name: 'Quote Q10099' })).toBeInTheDocument()
+    expect(await screen.findByText('Quote Q10099', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(within(screen.getByLabelText('Totals')).getByText('$777.00')).toBeInTheDocument()
     expect(customers.calls).toContainEqual({
       method: 'POST',
@@ -83,7 +86,7 @@ describe('QuoteEditorPage', () => {
     renderApp('/admin/quotes/new')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Quote' }))
+    const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     await user.type(form.getByLabelText('Customer name'), 'Walk In')
     await user.click(form.getByRole('button', { name: 'Add item' }))
     await user.type(
@@ -92,7 +95,7 @@ describe('QuoteEditorPage', () => {
     )
     await user.click(form.getByRole('button', { name: 'Save quote' }))
 
-    expect(await screen.findByRole('heading', { name: 'Quote Q10099' })).toBeInTheDocument()
+    expect(await screen.findByText('Quote Q10099', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(quotes.calls.find((call) => call.method === 'POST')?.body).toMatchObject({
       customerId: null,
       customer: { name: 'Walk In' },
@@ -105,7 +108,7 @@ describe('QuoteEditorPage', () => {
     renderApp('/admin/quotes/new')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Quote' }))
+    const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     await user.click(form.getByRole('button', { name: 'Save quote' }))
 
     expect(await form.findByText('Customer name is required')).toBeInTheDocument()
@@ -120,7 +123,7 @@ describe('QuoteEditorPage', () => {
     renderApp('/admin/quotes/QID1/edit')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Quote' }))
+    const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     expect(form.getByLabelText('Customer name')).toHaveValue('Pat Fleet')
     const line = within(form.getByRole('group', { name: 'Item 1' }))
     expect(line.getByLabelText('Description')).toHaveValue('HX35 Turbocharger')
@@ -129,7 +132,7 @@ describe('QuoteEditorPage', () => {
     await user.type(form.getByLabelText('Memo'), 'Customer approved')
     await user.click(form.getByRole('button', { name: 'Save quote' }))
 
-    expect(await screen.findByRole('heading', { name: 'Quote Q10001' })).toBeInTheDocument()
+    expect(await screen.findByText('Quote Q10001', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(customers.calls).toContainEqual(
       expect.objectContaining({ body: expect.objectContaining({ id: 'C_PAT' }) }),
     )
@@ -153,7 +156,7 @@ describe('QuoteEditorPage', () => {
     renderApp('/admin/quotes/QID1/edit')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Quote' }))
+    const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     await user.click(form.getByRole('button', { name: 'Save quote' }))
 
     expect(await form.findByText('Quote not found')).toBeInTheDocument()

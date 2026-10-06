@@ -22,12 +22,15 @@ function cartsBackend() {
   return http.get('/api/admin/carts/', () => HttpResponse.json([cart]))
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('CartsPage', () => {
   it('lists the customer and opens the cart from the row', async () => {
     server.use(authenticatedSession(), cartsBackend())
     renderApp('/admin/carts')
 
-    const link = await screen.findByRole('link', { name: 'kervisramon@gmail.com' })
+    const link = await screen.findByText('kervisramon@gmail.com', { selector: 'a' })
     expect(link).toHaveAttribute('href', '/admin/carts/da923dc0-12db-4909-8e6c-6cfedfd2cc85')
     const row = within(link.closest('tr') as HTMLElement)
     expect(row.getByText('ABANDONED')).toBeInTheDocument()
@@ -44,7 +47,7 @@ describe('CartsPage', () => {
     )
     renderApp('/admin/carts?status=ACTIVE')
 
-    expect(await screen.findByRole('link', { name: 'ada@example.com' })).toBeInTheDocument()
+    expect(await screen.findByText('ada@example.com', { selector: 'a' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'kervisramon@gmail.com' })).not.toBeInTheDocument()
   })
 
@@ -68,7 +71,7 @@ describe('CartDetailPage', () => {
     server.use(authenticatedSession(), cartsBackend())
     renderApp(`/admin/carts/${cart.id}`)
 
-    expect(await screen.findByRole('heading', { name: 'kervisramon@gmail.com' })).toBeInTheDocument()
+    expect(await screen.findByText('kervisramon@gmail.com', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     const items = screen.getByRole('table', { name: 'Cart items' })
     expect(items).toHaveTextContent('Reman Fuel Injector')
     expect(items).toHaveTextContent('HP-60')

@@ -16,13 +16,16 @@ function staffWith(permissions: string[]) {
   })
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('QuoteDetailPage', () => {
   it('shows customer, vehicle, items and the totals from the API', async () => {
     const backend = quotesBackend([quoteRow({})])
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/quotes/QID1')
 
-    expect(await screen.findByRole('heading', { name: 'Quote Q10001' })).toBeInTheDocument()
+    expect(await screen.findByText('Quote Q10001', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(screen.getByText('Fleet LLC')).toBeInTheDocument()
     expect(screen.getByText('2004 Dodge Ram 2500 5.9 · VIN 3D7KU28C')).toBeInTheDocument()
     expect(screen.getByText('Call before shipping')).toBeInTheDocument()
@@ -45,7 +48,7 @@ describe('QuoteDetailPage', () => {
     renderApp('/admin/quotes/QID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Send to customer' }))
+    await user.click(await screen.findByText('Send to customer', { selector: 'button' }))
 
     expect(await screen.findByText('Email provider not configured')).toBeInTheDocument()
   })
@@ -56,7 +59,7 @@ describe('QuoteDetailPage', () => {
     renderApp('/admin/quotes/QID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Send to customer' }))
+    await user.click(await screen.findByText('Send to customer', { selector: 'button' }))
 
     expect(await screen.findByText('Quote emailed to pat@example.com.')).toBeInTheDocument()
     expect(backend.calls).toContainEqual({ method: 'POST', path: '/api/admin/quotes/QID1/send/' })
@@ -68,7 +71,7 @@ describe('QuoteDetailPage', () => {
     renderApp('/admin/quotes/QID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Get public link' }))
+    await user.click(await screen.findByText('Get public link', { selector: 'button' }))
 
     expect(await screen.findByLabelText('Public quote link')).toHaveValue(
       'http://localhost:5174/quote/tok123',
@@ -85,10 +88,10 @@ describe('QuoteDetailPage', () => {
     renderApp('/admin/quotes/QID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Convert to order' }))
-    await user.click(await screen.findByRole('button', { name: 'Confirm convert' }))
+    await user.click(await screen.findByText('Convert to order', { selector: 'button' }))
+    await user.click(await screen.findByText('Confirm convert', { selector: 'button' }))
 
-    expect(await screen.findByRole('link', { name: 'Open order O20001' })).toHaveAttribute(
+    expect(await screen.findByText('Open order O20001', { selector: 'a' })).toHaveAttribute(
       'href',
       '/admin/orders/OID_NEW',
     )
@@ -100,7 +103,7 @@ describe('QuoteDetailPage', () => {
     renderApp('/admin/quotes/QID1')
 
     const user = userEvent.setup()
-    expect(await screen.findByRole('heading', { name: 'Quote Q10001' })).toBeInTheDocument()
+    expect(await screen.findByText('Quote Q10001', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Convert to order' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Reopen for 30 days' }))
 
@@ -114,11 +117,11 @@ describe('QuoteDetailPage', () => {
     renderApp('/admin/quotes/QID1')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Delete' }))
+    await user.click(await screen.findByText('Delete', { selector: 'button' }))
     expect(backend.calls.filter((call) => call.method === 'DELETE')).toEqual([])
     await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
 
-    expect(await screen.findByRole('heading', { name: 'Quotes' })).toBeInTheDocument()
+    expect(await screen.findByText('Quotes', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(backend.calls).toContainEqual({ method: 'DELETE', path: '/api/admin/quotes/QID1/' })
   })
 
@@ -127,7 +130,7 @@ describe('QuoteDetailPage', () => {
     server.use(staffWith(['quotes.view']), ...backend.handlers)
     renderApp('/admin/quotes/QID1')
 
-    expect(await screen.findByRole('heading', { name: 'Quote Q10001' })).toBeInTheDocument()
+    expect(await screen.findByText('Quote Q10001', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Get public link' })).toBeInTheDocument()
     for (const name of ['Send to customer', 'Convert to order', 'Delete']) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()

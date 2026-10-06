@@ -28,6 +28,9 @@ const products = [
   },
 ]
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('ProductsPage', () => {
   it('switches between the list and the cards without losing the product', async () => {
     server.use(
@@ -36,7 +39,7 @@ describe('ProductsPage', () => {
     )
     renderApp('/admin/products')
 
-    expect(await screen.findByRole('table', { name: 'Products' })).toBeInTheDocument()
+    expect(await screen.findByLabelText('Products', { selector: 'table' })).toBeInTheDocument()
     expect(screen.getByText('6.0L Turbo')).toBeInTheDocument()
     expect(screen.getByText('2005–2007 Ford')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Status for Oil Pump' })).toHaveValue('inactive')
@@ -53,7 +56,7 @@ describe('ProductsPage', () => {
     expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument()
 
     await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
-    expect(await screen.findByRole('heading', { name: 'Edit product' })).toBeInTheDocument()
+    expect(await screen.findByText('Edit product', { selector: 'h1, h2, h3' })).toBeInTheDocument()
   })
 
   it('reactivates an inactive product', async () => {
@@ -69,7 +72,7 @@ describe('ProductsPage', () => {
     renderApp('/admin/products')
 
     const user = userEvent.setup()
-    await user.selectOptions(await screen.findByRole('combobox', { name: 'Status for Oil Pump' }), 'active')
+    await user.selectOptions(await screen.findByLabelText('Status for Oil Pump', { selector: 'select' }), 'active')
 
     expect(body).toEqual({ active: true })
   })

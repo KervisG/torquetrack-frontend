@@ -25,6 +25,9 @@ function staffWith(permissions: string[]) {
   })
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('QuotesPage', () => {
   it('blocks staff without quotes.view and never calls the API', async () => {
     const backend = quotesBackend([quoteRow({})])
@@ -43,8 +46,8 @@ describe('QuotesPage', () => {
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/quotes')
 
-    expect(await screen.findByRole('heading', { name: 'Quotes' })).toBeInTheDocument()
-    await screen.findByRole('link', { name: 'Q10001' })
+    expect(await screen.findByText('Quotes', { selector: 'h1, h2, h3' })).toBeInTheDocument()
+    await screen.findByText('Q10001', { selector: 'a' })
     const links = screen.getAllByRole('link', { name: /^Q1000/ })
     expect(links.map((link) => link.textContent)).toEqual(['Q10002', 'Q10001'])
     const row = within(screen.getByRole('link', { name: 'Q10001' }).closest('tr') as HTMLElement)
@@ -59,7 +62,7 @@ describe('QuotesPage', () => {
     renderApp('/admin/quotes')
 
     const user = userEvent.setup()
-    await screen.findByRole('table', { name: 'Quotes' })
+    await screen.findByLabelText('Quotes', { selector: 'table' })
     await user.click(screen.getByRole('button', { name: 'Icons' }))
 
     expect(screen.queryByRole('table', { name: 'Quotes' })).not.toBeInTheDocument()
@@ -79,7 +82,7 @@ describe('QuotesPage', () => {
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/quotes?status=BUILDING')
 
-    expect(await screen.findByRole('link', { name: 'Q10002' })).toBeInTheDocument()
+    expect(await screen.findByText('Q10002', { selector: 'a' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Q10001' })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Building', selected: true })).toBeInTheDocument()
 
@@ -93,7 +96,7 @@ describe('QuotesPage', () => {
     server.use(staffWith(['quotes.view']), ...backend.handlers)
     renderApp('/admin/quotes')
 
-    await screen.findByRole('link', { name: 'Q10001' })
+    await screen.findByText('Q10001', { selector: 'a' })
     expect(screen.queryByRole('button', { name: 'New quote' })).not.toBeInTheDocument()
   })
 

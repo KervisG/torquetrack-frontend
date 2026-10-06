@@ -22,6 +22,9 @@ function rowFor(number: string) {
   return screen.getByRole('link', { name: number }).closest('tr') as HTMLElement
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('OrdersPage', () => {
   it('blocks staff without orders.view and never calls the API', async () => {
     const backend = ordersBackend([orderRow({})])
@@ -47,8 +50,8 @@ describe('OrdersPage', () => {
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/orders')
 
-    expect(await screen.findByRole('heading', { name: 'Orders' })).toBeInTheDocument()
-    await screen.findByRole('link', { name: 'O10001' })
+    expect(await screen.findByText('Orders', { selector: 'h1, h2, h3' })).toBeInTheDocument()
+    await screen.findByText('O10001', { selector: 'a' })
     const links = screen.getAllByRole('link', { name: /^O1000/ })
     expect(links.map((link) => link.textContent)).toEqual(['O10002', 'O10001'])
     const row = within(rowFor('O10001'))
@@ -65,7 +68,7 @@ describe('OrdersPage', () => {
     renderApp('/admin/orders')
 
     const user = userEvent.setup()
-    await screen.findByRole('link', { name: 'O10001' })
+    await screen.findByText('O10001', { selector: 'a' })
     await user.type(screen.getByLabelText('Search orders'), 'guest')
     expect(screen.queryByRole('link', { name: 'O10001' })).not.toBeInTheDocument()
     await user.clear(screen.getByLabelText('Search orders'))

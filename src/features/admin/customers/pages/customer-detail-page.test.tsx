@@ -18,19 +18,22 @@ function staffWith(permissions: string[]) {
   })
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('CustomerDetailPage', () => {
   it('shows the profile and the submitted tax exemption', async () => {
     const backend = customersBackend([pending])
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/customers/C_PAT')
 
-    expect(await screen.findByRole('heading', { name: 'Pat Fleet' })).toBeInTheDocument()
+    expect(await screen.findByText('Pat Fleet', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     const profile = within(screen.getByRole('region', { name: 'Profile' }))
     expect(profile.getByText('pat@example.com')).toBeInTheDocument()
     expect(profile.getByText('555-0100')).toBeInTheDocument()
     expect(profile.getByText('Has account')).toBeInTheDocument()
 
-    const review = within(await screen.findByRole('region', { name: 'Tax exemption' }))
+    const review = within(await screen.findByLabelText('Tax exemption', { selector: '[role="region"]' }))
     expect(await review.findByText('12-3456789')).toBeInTheDocument()
     expect(review.getByText('Resale')).toBeInTheDocument()
     expect(review.getByRole('link', { name: 'Download resale.pdf' })).toHaveAttribute(
@@ -46,7 +49,7 @@ describe('CustomerDetailPage', () => {
     renderApp('/admin/customers/C_PAT')
 
     const user = userEvent.setup()
-    const review = within(await screen.findByRole('region', { name: 'Tax exemption' }))
+    const review = within(await screen.findByLabelText('Tax exemption', { selector: '[role="region"]' }))
     await review.findByText('12-3456789')
     await user.selectOptions(review.getByLabelText('New tax status'), 'VERIFIED')
     await user.click(review.getByRole('button', { name: 'Update tax status' }))
@@ -74,7 +77,7 @@ describe('CustomerDetailPage', () => {
     renderApp('/admin/customers/C_PAT')
 
     const user = userEvent.setup()
-    const review = within(await screen.findByRole('region', { name: 'Tax exemption' }))
+    const review = within(await screen.findByLabelText('Tax exemption', { selector: '[role="region"]' }))
     await review.findByText('12-3456789')
     await user.click(review.getByRole('button', { name: 'Update tax status' }))
 
@@ -86,7 +89,7 @@ describe('CustomerDetailPage', () => {
     server.use(staffWith(['customers.view']), ...backend.handlers)
     renderApp('/admin/customers/C_PAT')
 
-    expect(await screen.findByRole('heading', { name: 'Pat Fleet' })).toBeInTheDocument()
+    expect(await screen.findByText('Pat Fleet', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(
       screen.getByText('You do not have permission to review tax exemptions.'),
     ).toBeInTheDocument()
