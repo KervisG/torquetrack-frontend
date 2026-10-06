@@ -13,17 +13,41 @@ type SelectFieldProps = ComponentProps<'select'> & {
 // `<select>` nativo en lugar del Select de Radix: se registra directo con
 // react-hook-form y funciona con teclado y lectores de pantalla sin portal.
 export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(function SelectField(
-  { id, label, options, error, className, ...props },
+  {
+    id,
+    label,
+    options,
+    error,
+    className,
+    'aria-invalid': ariaInvalid,
+    'aria-describedby': ariaDescribedBy,
+    ...props
+  },
   ref,
 ) {
+  // Igual que `FormField`: con error queda marcado y describe el mensaje.
+  const errorId = error ? `${id}-error` : undefined
+  const describedBy = [ariaDescribedBy, errorId].filter(Boolean).join(' ') || undefined
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+      {props['aria-required'] ? (
+        <div className="flex items-center gap-1">
+          <Label htmlFor={id}>{label}</Label>
+          <span aria-hidden="true" className="text-sm text-destructive">
+            *
+          </span>
+        </div>
+      ) : (
+        <Label htmlFor={id}>{label}</Label>
+      )}
       <select
         id={id}
         ref={ref}
+        aria-invalid={error ? true : ariaInvalid}
+        aria-describedby={describedBy}
         className={cn(
           'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          error && 'border-destructive focus-visible:ring-destructive',
           className,
         )}
         {...props}
@@ -34,7 +58,11 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(funct
           </option>
         ))}
       </select>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p id={errorId} className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 })

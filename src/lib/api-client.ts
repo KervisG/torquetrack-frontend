@@ -1,10 +1,13 @@
 export class ApiError extends Error {
   readonly status: number
+  // Campo (snake_case) que el backend señala como culpable, si lo manda.
+  readonly field?: string
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, field?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.field = field
   }
 }
 
@@ -64,7 +67,10 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   const response = await fetch(`/api${withTrailingSlash(path)}`, {
     ...init,
     credentials: 'include',
-    signal: init?.signal ?? AbortSignal.timeout(10_000),
+    // La señal del llamador (cancelar una consulta vieja) no quita el timeout.
+    signal: init?.signal
+      ? AbortSignal.any([init.signal, AbortSignal.timeout(10_000)])
+      : AbortSignal.timeout(10_000),
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'X-CSRFToken': token } : {}),
@@ -82,7 +88,11 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
       typeof body.error === 'string'
         ? body.error
         : 'Request failed'
-    throw new ApiError(message, response.status)
+    const field =
+      body && typeof body === 'object' && 'field' in body && typeof body.field === 'string'
+        ? body.field
+        : undefined
+    throw new ApiError(message, response.status, field)
   }
 
   return body as T
