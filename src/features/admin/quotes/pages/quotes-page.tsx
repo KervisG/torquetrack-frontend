@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { FileText } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+import { EmptyState } from '@/components/empty-state'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { ListPagination, usePagedRows } from '@/components/list-pagination'
@@ -52,7 +54,8 @@ export function QuotesPage() {
   const [params, setParams] = useSearchParams()
   const status = params.get('status')?.toUpperCase() || 'ALL'
   const [search, setSearch] = useState('')
-  const [creating, setCreating] = useState(false)
+  // `?new=1` llega desde los accesos del dashboard y abre el alta.
+  const [creating, setCreating] = useState(() => can('quotes.create') && params.has('new'))
   const [layout, setLayout] = useState<QuoteLayout>('table')
   const quotes = useQuery({
     queryKey: adminQuoteKeys.list(),
@@ -81,7 +84,17 @@ export function QuotesPage() {
         }
       />
       {can('quotes.create') ? (
-        <QuoteEditorDialog open={creating} onOpenChange={setCreating} />
+        <QuoteEditorDialog
+          open={creating}
+          onOpenChange={(open) => {
+            setCreating(open)
+            if (!open && params.has('new')) {
+              const next = new URLSearchParams(params)
+              next.delete('new')
+              setParams(next, { replace: true })
+            }
+          }}
+        />
       ) : null}
       <div className="space-y-4">
           <div role="tablist" aria-label="Status" className="flex flex-wrap gap-2">
@@ -115,6 +128,19 @@ export function QuotesPage() {
             <p className="text-sm text-muted-foreground">Loading quotes…</p>
           ) : quotes.error ? (
             <FormError error={quotes.error} />
+          ) : !quotes.data.length ? (
+            <EmptyState
+              icon={FileText}
+              title="No quotes yet"
+              description="Quotes you prepare for customers appear here, ready to send or convert into orders."
+              action={
+                can('quotes.create') ? (
+                  <Button type="button" onClick={() => setCreating(true)}>
+                    Create a quote
+                  </Button>
+                ) : null
+              }
+            />
           ) : (
             <>
               {layout === 'table' ? (

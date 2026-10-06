@@ -1,17 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Users } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
+import { EmptyState } from '@/components/empty-state'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { ListPagination, usePagedRows } from '@/components/list-pagination'
 import { SelectField } from '@/components/select-field'
 import { PageHeader } from '@/components/app-shell/page-header'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
 
 import { deleteCustomer, listCustomers, sendPortalInvite } from '../api'
-import { CreateCustomerForm } from '../components/create-customer-form'
+import { CreateCustomerDialog } from '../components/create-customer-form'
 import { CustomersTable } from '../components/customers-table'
 import { adminCustomerKeys } from '../query-keys'
 import { TAX_STATUSES, type AdminCustomer } from '../types'
@@ -37,6 +41,11 @@ export function CustomersPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [taxStatus, setTaxStatus] = useState('ALL')
+  const canCreate = can('customers.edit')
+  // `?new=1` llega desde los accesos del dashboard y abre el alta.
+  const [params, setParams] = useSearchParams()
+  const [creating, setCreating] = useState(() => canCreate && params.has('new'))
+  const [created, setCreated] = useState(false)
   const customers = useQuery({
     queryKey: adminCustomerKeys.list(),
     queryFn: listCustomers,
@@ -58,6 +67,11 @@ export function CustomersPage() {
   const rows = customers.data?.filter((customer) => matches(customer, search, taxStatus)) ?? []
   const paged = usePagedRows(rows, `${search}|${taxStatus}`)
 
+  function openCreate() {
+    setCreated(false)
+    setCreating(true)
+  }
+
   if (!allowed) {
     return (
       <PermissionNotice
@@ -69,7 +83,32 @@ export function CustomersPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader title="Customers" description="Customer profiles, portal invites and tax status." />
+      <PageHeader
+        title="Customers"
+        description="Customer profiles, portal invites and tax status."
+        actions={
+          canCreate ? (
+            <Button type="button" onClick={() => openCreate()}>
+              New customer
+            </Button>
+          ) : null
+        }
+      />
+      {canCreate ? (
+        <CreateCustomerDialog
+          open={creating}
+          onOpenChange={(open) => {
+            setCreating(open)
+            if (!open && params.has('new')) setParams({}, { replace: true })
+          }}
+          onCreated={() => setCreated(true)}
+        />
+      ) : null}
+      {created ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          Customer saved.
+        </p>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">All customers</CardTitle>
@@ -95,6 +134,19 @@ export function CustomersPage() {
             <p className="text-sm text-muted-foreground">Loading customers…</p>
           ) : customers.error ? (
             <FormError error={customers.error} />
+          ) : !customers.data.length ? (
+            <EmptyState
+              icon={Users}
+              title="No customers yet"
+              description="Add customers to prepare quotes, send portal invites and track tax exemptions."
+              action={
+                canCreate ? (
+                  <Button type="button" onClick={() => openCreate()}>
+                    Add customer
+                  </Button>
+                ) : null
+              }
+            />
           ) : (
             <>
               <CustomersTable
@@ -134,16 +186,6 @@ export function CustomersPage() {
           ) : null}
         </CardContent>
       </Card>
-      {can('customers.edit') ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Create customer</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CreateCustomerForm />
-          </CardContent>
-        </Card>
-      ) : null}
     </section>
   )
 }

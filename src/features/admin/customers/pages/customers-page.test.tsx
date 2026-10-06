@@ -30,6 +30,9 @@ function staffWith(permissions: string[]) {
   })
 }
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('CustomersPage', () => {
   it('blocks staff without customers.view and never calls the API', async () => {
     const backend = customersBackend([pat])
@@ -48,7 +51,7 @@ describe('CustomersPage', () => {
     server.use(authenticatedSession(), ...backend.handlers)
     renderApp('/admin/customers')
 
-    expect(await screen.findByRole('heading', { name: 'Customers' })).toBeInTheDocument()
+    expect(await screen.findByText('Customers', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     await screen.findByText('pat@example.com')
     const row = within(rowFor('pat@example.com'))
     expect(row.getByRole('link', { name: 'Pat Fleet' })).toHaveAttribute(
@@ -83,11 +86,12 @@ describe('CustomersPage', () => {
     renderApp('/admin/customers')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Create customer' }))
+    await user.click(await screen.findByText('New customer', { selector: 'button' }))
+    const form = within(await screen.findByLabelText('Create customer', { selector: 'form' }))
     await user.type(form.getByLabelText('Name'), 'Nia New')
     await user.type(form.getByLabelText('Company (optional)'), 'New Fleet')
     await user.type(form.getByLabelText('Email'), 'nia@example.com')
-    await user.click(form.getByRole('button', { name: 'Create customer' }))
+    await user.click(screen.getByRole('button', { name: 'Create customer' }))
 
     expect(await screen.findByText('nia@example.com')).toBeInTheDocument()
     expect(backend.calls).toContainEqual({
@@ -107,9 +111,10 @@ describe('CustomersPage', () => {
     renderApp('/admin/customers')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Create customer' }))
+    await user.click(await screen.findByText('New customer', { selector: 'button' }))
+    const form = within(await screen.findByLabelText('Create customer', { selector: 'form' }))
     await user.type(form.getByLabelText('Email'), 'not-an-email')
-    await user.click(form.getByRole('button', { name: 'Create customer' }))
+    await user.click(screen.getByRole('button', { name: 'Create customer' }))
 
     expect(await form.findByText('Name is required')).toBeInTheDocument()
     expect(form.getByText('Valid email required')).toBeInTheDocument()
@@ -131,13 +136,14 @@ describe('CustomersPage', () => {
     renderApp('/admin/customers')
 
     const user = userEvent.setup()
-    const form = within(await screen.findByRole('form', { name: 'Create customer' }))
+    await user.click(await screen.findByText('New customer', { selector: 'button' }))
+    const form = within(await screen.findByLabelText('Create customer', { selector: 'form' }))
     await user.type(form.getByLabelText('Name'), 'Pat Fleet')
-    await user.click(form.getByRole('button', { name: 'Create customer' }))
+    await user.type(form.getByLabelText('Email'), 'pat@example.com')
+    await user.click(screen.getByRole('button', { name: 'Create customer' }))
 
-    expect(
-      await form.findByText('That email already belongs to another customer.'),
-    ).toBeInTheDocument()
+    // El mensaje crudo del backend llega traducido y junto al campo.
+    expect(await form.findByText('Another customer already uses this email.')).toBeInTheDocument()
   })
 
   it('hides create, invite and delete without the edit and delete permissions', async () => {
