@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { STACKED_TABLE } from '@/components/stacked-table'
+import { cn } from '@/lib/utils'
 
 import { customerLabel, portalLabel, type AdminCustomer } from '../types'
 
@@ -35,7 +37,7 @@ export function CustomersTable({
 
   return (
     <div className="overflow-x-auto">
-      <table aria-label="Customers" className="w-full text-left text-sm">
+      <table aria-label="Customers" className={cn('w-full text-left text-sm', STACKED_TABLE)}>
         <thead className="border-b text-muted-foreground">
           <tr>
             <th className="py-2 pr-4 font-medium">Name</th>
@@ -51,7 +53,7 @@ export function CustomersTable({
         <tbody>
           {customers.map((customer) => (
             <tr key={customer.id} className="border-b last:border-0">
-              <td className="py-2 pr-4">
+              <td data-label="Name" className="py-2 pr-4">
                 <Link
                   to={`/admin/customers/${encodeURIComponent(customer.id)}`}
                   className="font-medium underline-offset-4 hover:underline"
@@ -59,15 +61,15 @@ export function CustomersTable({
                   {customerLabel(customer)}
                 </Link>
               </td>
-              <td className="py-2 pr-4">{customer.company || '—'}</td>
-              <td className="py-2 pr-4">{customer.email || '—'}</td>
-              <td className="py-2 pr-4">
+              <td data-label="Company" className="py-2 pr-4">{customer.company || '—'}</td>
+              <td data-label="Email" className="py-2 pr-4">{customer.email || '—'}</td>
+              <td data-label="Tax status" className="py-2 pr-4">
                 <Badge variant={customer.taxStatus === 'VERIFIED' ? 'secondary' : 'outline'}>
                   {customer.taxStatus}
                 </Badge>
               </td>
-              <td className="py-2 pr-4">{portalLabel(customer.portalStatus)}</td>
-              <td className="py-2 text-right">
+              <td data-label="Portal" className="py-2 pr-4">{portalLabel(customer.portalStatus)}</td>
+              <td data-label="" className="py-2 text-right">
                 <div className="flex justify-end gap-2">
                   {confirmingId === customer.id ? (
                     <>

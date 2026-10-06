@@ -15,3 +15,12 @@ export type AdminUser = {
   permissions: string[]
   createdAt: Date
 }
+
+// `name` del backend cae al email cuando la cuenta no tiene nombre; el panel
+// muestra solo el nombre real.
+export function userDisplayName(user: Pick<AdminUser, 'firstName' | 'lastName'>): string {
+  return [user.firstName, user.lastName]
+    .map((part) => (part ?? '').trim())
+    .filter(Boolean)
+    .join(' ')
+}

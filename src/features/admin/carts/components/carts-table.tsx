@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
+import { STACKED_TABLE } from '@/components/stacked-table'
+import { cn } from '@/lib/utils'
 
 import type { AdminCart } from '../types'
 
@@ -29,7 +31,7 @@ export function CartsTable({ carts }: { carts: AdminCart[] }) {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-foreground/15 bg-background">
-      <table aria-label="Carts" className="w-full text-left text-sm">
+      <table aria-label="Carts" className={cn('w-full text-left text-sm', STACKED_TABLE)}>
         <thead className="border-b text-muted-foreground">
           <tr>
             <th className="px-4 py-3 font-medium">Customer</th>
@@ -42,7 +44,7 @@ export function CartsTable({ carts }: { carts: AdminCart[] }) {
           {carts.map((cart) => (
             // El enlace cubre la fila. El nombre accesible es el cliente, no el id.
             <tr key={cart.id} className="group relative border-b border-border/60 last:border-0 hover:bg-muted/50">
-              <td className="px-4 py-4">
+              <td data-label="Customer" className="px-4 py-4">
                 <Link
                   to={`/admin/carts/${encodeURIComponent(cart.id)}`}
                   className="font-medium after:absolute after:inset-0 after:content-[''] group-hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -50,11 +52,11 @@ export function CartsTable({ carts }: { carts: AdminCart[] }) {
                   {cartLabel(cart)}
                 </Link>
               </td>
-              <td className="px-4 py-4">
+              <td data-label="Status" className="px-4 py-4">
                 <Badge variant={cart.status === 'ACTIVE' ? 'secondary' : 'outline'}>{cart.status}</Badge>
               </td>
-              <td className="px-4 py-4">{itemCount(cart)}</td>
-              <td className="px-4 py-4">{formatCartUpdated(cart.updatedAt)}</td>
+              <td data-label="Items" className="px-4 py-4">{itemCount(cart)}</td>
+              <td data-label="Updated" className="px-4 py-4">{formatCartUpdated(cart.updatedAt)}</td>
             </tr>
           ))}
         </tbody>
