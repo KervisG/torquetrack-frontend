@@ -27,8 +27,8 @@ type AppShellProps = {
 }
 
 // Layout del panel y del portal: barra lateral fija en escritorio y cajón en
-// móvil. El estado de datos (sesión, permisos, sign out) lo resuelve cada
-// audiencia y llega por props.
+// móvil. El estado de datos (sesión, permisos, sign out) lo resuelve
+// `PanelShell` y llega por props.
 export function AppShell({
   navLabel,
   homeHref,
