@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Package } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
+import { EmptyState } from '@/components/empty-state'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { ListPagination, usePagedRows } from '@/components/list-pagination'
@@ -42,6 +45,13 @@ function productIdFromTitle(title: string): string {
   return slug ? `${slug}-${suffix}` : `product-${suffix}`
 }
 
+// En pantallas chicas la tabla no cabe: arranca en tarjetas y desde `md` en
+// lista. El toggle sigue mandando después.
+function initialLayout(): ProductLayout {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'list'
+  return window.matchMedia('(min-width: 768px)').matches ? 'list' : 'cards'
+}
+
 export function ProductsPage() {
   const { can } = useAdminPermissions()
   const allowed = can('products.view')
@@ -50,8 +60,12 @@ export function ProductsPage() {
   const canViewCosts = can('costs.view')
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
-  const [layout, setLayout] = useState<ProductLayout>('list')
-  const [editing, setEditing] = useState<AdminProduct | null | undefined>(undefined)
+  const [layout, setLayout] = useState<ProductLayout>(initialLayout)
+  // `?new=1` llega desde los accesos del dashboard y abre el alta.
+  const [params, setParams] = useSearchParams()
+  const [editing, setEditing] = useState<AdminProduct | null | undefined>(() =>
+    canEdit && params.has('new') ? null : undefined,
+  )
   const products = useQuery({
     queryKey: adminProductKeys.list(),
     queryFn: listAdminProducts,
@@ -67,7 +81,7 @@ export function ProductsPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: adminProductKeys.all })
-      setEditing(undefined)
+      closeEditor()
     },
   })
   const deactivate = useMutation({
@@ -88,9 +102,19 @@ export function ProductsPage() {
   )
   const paged = usePagedRows(rows, search)
 
+  function closeEditor() {
+    setEditing(undefined)
+    if (params.has('new')) setParams({}, { replace: true })
+  }
+
   function openEditor(product: AdminProduct) {
     save.reset()
     setEditing(product)
+  }
+
+  function openNew() {
+    save.reset()
+    setEditing(null)
   }
 
   if (!allowed) {
@@ -106,7 +130,7 @@ export function ProductsPage() {
         description="Catalog parts, pricing, fitment, and shipping dimensions."
         actions={
           canEdit ? (
-            <Button type="button" onClick={() => setEditing(null)}>
+            <Button type="button" onClick={() => openNew()}>
               New product
             </Button>
           ) : null
@@ -129,6 +153,19 @@ export function ProductsPage() {
           <p className="text-sm text-muted-foreground">Loading products…</p>
         ) : products.error ? (
           <FormError error={products.error} />
+        ) : !products.data.length ? (
+          <EmptyState
+            icon={Package}
+            title="No products yet"
+            description="Products you add here show up in the storefront catalog and in quotes."
+            action={
+              canEdit ? (
+                <Button type="button" onClick={() => openNew()}>
+                  Add your first product
+                </Button>
+              ) : null
+            }
+          />
         ) : (
           <>
             {layout === 'list' ? (
@@ -175,7 +212,7 @@ export function ProductsPage() {
           canEditPricing={canEditPricing}
           canViewCosts={canViewCosts}
           onOpenChange={(open) => {
-            if (!open) setEditing(undefined)
+            if (!open) closeEditor()
           }}
           onSubmit={(values) => save.mutate(values)}
         />

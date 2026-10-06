@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useMemo } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 
-import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { useApiFieldError } from '@/components/use-api-field-error'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -13,9 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { adminProductSchema, type AdminProductValues } from '@/lib/validators/admin-product'
+import { buildAdminProductSchema, type AdminProductValues } from '@/lib/validators/admin-product'
 
 import type { AdminProduct } from '../types'
+
+import { CompatibleVehiclesField } from './compatible-vehicles-field'
 
 const emptyProduct: AdminProductValues = {
   title: '',
@@ -24,10 +27,10 @@ const emptyProduct: AdminProductValues = {
   condition: '',
   make: '',
   model: '',
-  yearFrom: 0,
-  yearTo: 0,
+  yearFrom: '',
+  yearTo: '',
   engine: '',
-  price: 0,
+  price: '',
   coreCharge: 0,
   fitment: '',
   description: '',
@@ -43,6 +46,7 @@ const emptyProduct: AdminProductValues = {
   supplierUrl: '',
   internalNotes: '',
   active: true,
+  applicationIds: [],
 }
 
 function valuesFor(product: AdminProduct): AdminProductValues {
@@ -54,10 +58,10 @@ function valuesFor(product: AdminProduct): AdminProductValues {
     condition: product.condition ?? '',
     make: product.make ?? '',
     model: product.model ?? '',
-    yearFrom: product.yearFrom ?? 0,
-    yearTo: product.yearTo ?? 0,
+    yearFrom: product.yearFrom ? String(product.yearFrom) : '',
+    yearTo: product.yearTo ? String(product.yearTo) : '',
     engine: product.engine ?? '',
-    price: product.price ?? 0,
+    price: product.price ? String(product.price) : '',
     coreCharge: product.coreCharge ?? 0,
     fitment: product.fitment ?? '',
     description: product.description ?? '',
@@ -73,6 +77,7 @@ function valuesFor(product: AdminProduct): AdminProductValues {
     supplierUrl: product.supplierUrl ?? '',
     internalNotes: product.internalNotes ?? '',
     active: product.active,
+    applicationIds: product.applicationIds ?? [],
   }
 }
 
@@ -97,10 +102,14 @@ export function ProductEditorDialog({
   onOpenChange,
   onSubmit,
 }: ProductEditorDialogProps) {
+  const schema = useMemo(() => buildAdminProductSchema({ requirePrice: canEditPricing }), [canEditPricing])
   const form = useForm<AdminProductValues>({
-    resolver: zodResolver(adminProductSchema),
+    resolver: zodResolver(schema),
     defaultValues: product ? valuesFor(product) : emptyProduct,
+    // Al enviar, el foco va al primer campo inválido.
+    shouldFocusError: true,
   })
+  const generalError = useApiFieldError(form, error)
 
   function handleOpenChange(next: boolean) {
     if (next) {
@@ -120,7 +129,8 @@ export function ProductEditorDialog({
         <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 pr-12">
           <DialogTitle>{product ? 'Edit product' : 'New product'}</DialogTitle>
           <DialogDescription>
-            Catalog details, fitment, and the package used to quote shipping.
+            Catalog details, fitment, and the package used to quote shipping. Fields marked{' '}
+            <span className="text-destructive">*</span> are required.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -132,8 +142,20 @@ export function ProductEditorDialog({
           <fieldset className="space-y-4">
             <legend className="text-lg font-semibold">Basics</legend>
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="product-title" label="Title" error={errors.title?.message} {...form.register('title')} />
-              <FormField id="product-part" label="Part #" {...form.register('partNumber')} />
+              <FormField
+                id="product-title"
+                label="Title"
+                aria-required
+                error={errors.title?.message}
+                {...form.register('title')}
+              />
+              <FormField
+                id="product-part"
+                label="Part #"
+                aria-required
+                error={errors.partNumber?.message}
+                {...form.register('partNumber')}
+              />
               <FormField id="product-category" label="Category" {...form.register('category')} />
               <FormField id="product-condition" label="Condition" {...form.register('condition')} />
               <FormField id="product-image" label="Image URL" {...form.register('image')} />
@@ -151,20 +173,29 @@ export function ProductEditorDialog({
               <FormField
                 id="product-year-from"
                 label="Year from"
-                type="number"
+                inputMode="numeric"
+                placeholder="e.g. 2005"
                 error={errors.yearFrom?.message}
-                {...form.register('yearFrom', { valueAsNumber: true })}
+                {...form.register('yearFrom')}
               />
               <FormField
                 id="product-year-to"
                 label="Year to"
-                type="number"
+                inputMode="numeric"
+                placeholder="e.g. 2007"
                 error={errors.yearTo?.message}
-                {...form.register('yearTo', { valueAsNumber: true })}
+                {...form.register('yearTo')}
               />
               <FormField id="product-engine" label="Engine" {...form.register('engine')} />
             </div>
             <FormField id="product-fitment" label="Fitment notes" {...form.register('fitment')} />
+            <Controller
+              control={form.control}
+              name="applicationIds"
+              render={({ field }) => (
+                <CompatibleVehiclesField value={field.value} onChange={field.onChange} />
+              )}
+            />
             <div className="space-y-2">
               <Label htmlFor="product-description">Description</Label>
               <textarea
@@ -188,8 +219,10 @@ export function ProductEditorDialog({
                 type="number"
                 min={0}
                 step="0.01"
+                placeholder="0.00"
+                aria-required={canEditPricing || undefined}
                 error={errors.price?.message}
-                {...form.register('price', { valueAsNumber: true })}
+                {...form.register('price')}
               />
               <FormField
                 id="product-core"
@@ -211,6 +244,7 @@ export function ProductEditorDialog({
                 type="number"
                 min={0}
                 step="0.01"
+                error={errors.shippingWeight?.message}
                 {...form.register('shippingWeight', { valueAsNumber: true })}
               />
               <FormField
@@ -219,6 +253,7 @@ export function ProductEditorDialog({
                 type="number"
                 min={0}
                 step="0.01"
+                error={errors.packageLength?.message}
                 {...form.register('packageLength', { valueAsNumber: true })}
               />
               <FormField
@@ -227,6 +262,7 @@ export function ProductEditorDialog({
                 type="number"
                 min={0}
                 step="0.01"
+                error={errors.packageWidth?.message}
                 {...form.register('packageWidth', { valueAsNumber: true })}
               />
               <FormField
@@ -235,6 +271,7 @@ export function ProductEditorDialog({
                 type="number"
                 min={0}
                 step="0.01"
+                error={errors.packageHeight?.message}
                 {...form.register('packageHeight', { valueAsNumber: true })}
               />
             </div>
@@ -256,14 +293,19 @@ export function ProductEditorDialog({
                   min={0}
                   step="0.01"
                   disabled={!canEditPricing}
-                  {...form.register('purchaseCost', { valueAsNumber: true })}
+                  error={errors.purchaseCost?.message}
+                {...form.register('purchaseCost', { valueAsNumber: true })}
                 />
                 <FormField id="product-supplier-url" label="Supplier URL" {...form.register('supplierUrl')} />
               </div>
               <FormField id="product-notes" label="Internal notes" {...form.register('internalNotes')} />
             </fieldset>
           ) : null}
-          <FormError error={error} />
+          {generalError ? (
+            <p role="alert" className="text-sm text-destructive">
+              {generalError}
+            </p>
+          ) : null}
         </form>
         <DialogFooter className="shrink-0 border-t bg-background px-6 py-4">
           <Button type="button" variant="outline" disabled={submitting} onClick={() => handleOpenChange(false)}>

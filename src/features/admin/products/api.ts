@@ -1,7 +1,7 @@
 import { apiRequest } from '@/lib/api-client'
-import type { AdminProductValues } from '@/lib/validators/admin-product'
+import { optionalNumber, type AdminProductValues } from '@/lib/validators/admin-product'
 
-import type { AdminProduct } from './types'
+import type { AdminApplication, AdminProduct } from './types'
 
 function num(value: unknown): number | undefined {
   const parsed = Number(value)
@@ -50,6 +50,7 @@ function toProduct(row: Record<string, unknown>): AdminProduct {
     packageLength: num(row.packageLength),
     packageWidth: num(row.packageWidth),
     packageHeight: num(row.packageHeight),
+    applicationIds: Array.isArray(row.applicationIds) ? row.applicationIds.map(String) : [],
   }
 }
 
@@ -68,6 +69,12 @@ export function saveAdminProduct(
     method: 'PUT',
     body: JSON.stringify(payload),
   })
+}
+
+// Opciones del selector de vehículos compatibles; `id` es el código que va en
+// `applicationIds`.
+export function listAdminApplications(): Promise<AdminApplication[]> {
+  return apiRequest<AdminApplication[]>('/admin/applications')
 }
 
 export function deactivateAdminProduct(id: string): Promise<{ ok: true }> {
@@ -95,8 +102,8 @@ export function productPayload(
     condition: values.condition,
     make: values.make,
     model: values.model,
-    yearFrom: values.yearFrom,
-    yearTo: values.yearTo,
+    yearFrom: optionalNumber(values.yearFrom),
+    yearTo: optionalNumber(values.yearTo),
     engine: values.engine,
     fitment: values.fitment,
     description: values.description,
@@ -107,9 +114,10 @@ export function productPayload(
     packageHeight: values.packageHeight,
     image: values.image,
     active: values.active,
+    applicationIds: values.applicationIds,
   }
   if (options.canEditPricing) {
-    payload.price = values.price
+    payload.price = optionalNumber(values.price)
     payload.coreCharge = values.coreCharge
     if (options.canViewCosts) payload.purchaseCost = values.purchaseCost
   } else {
