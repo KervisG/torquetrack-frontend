@@ -1,4 +1,4 @@
-import { ChevronDown, CircleUser, LayoutDashboard, LogOut, UserRound } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, LogOut, UserRound } from 'lucide-react'
 import { useId } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -18,6 +18,9 @@ export function StorefrontAccountMenu({ user }: { user: SessionUser }) {
   const signOut = useSignOut()
   const panelId = useId()
   const name = displayName(user)
+  // En la cabecera va el nombre (o la parte local del correo) y un avatar con
+  // iniciales; el correo completo vive en el desplegable y en el tooltip.
+  const shortName = user.firstName.trim() || user.email.split('@')[0] || user.email
 
   return (
     <div ref={rootRef} className="relative shrink-0">
@@ -30,8 +33,15 @@ export function StorefrontAccountMenu({ user }: { user: SessionUser }) {
         onClick={toggle}
         className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-sm text-white/75 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
       >
-        <CircleUser className="size-5" aria-hidden="true" />
-        <span className="hidden max-w-32 truncate sm:block">{user.firstName || user.email}</span>
+        <span
+          aria-hidden="true"
+          className="grid size-7 shrink-0 place-items-center rounded-full bg-amber-400 text-xs font-semibold uppercase text-neutral-950"
+        >
+          {initials(user)}
+        </span>
+        <span className="hidden max-w-40 truncate sm:block" title={user.email}>
+          {shortName}
+        </span>
         <ChevronDown className="size-4 text-white/60" aria-hidden="true" />
       </button>
       {open ? (
@@ -40,8 +50,10 @@ export function StorefrontAccountMenu({ user }: { user: SessionUser }) {
           className="absolute right-0 z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
         >
           <div className="space-y-0.5 px-2 py-2">
-            <p className="truncate text-sm font-medium">{name}</p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="break-words text-sm font-medium">{name}</p>
+            <p className="break-all text-xs text-muted-foreground" title={user.email}>
+              {user.email}
+            </p>
           </div>
           <div className="my-1 h-px bg-border" />
           <Link to="/account" className={itemClass} onClick={close}>
@@ -68,4 +80,11 @@ export function StorefrontAccountMenu({ user }: { user: SessionUser }) {
       ) : null}
     </div>
   )
+}
+
+function initials(user: SessionUser): string {
+  const fromName = [user.firstName, user.lastName]
+    .map((part) => part.trim().charAt(0))
+    .join('')
+  return fromName || user.email.charAt(0) || '?'
 }
