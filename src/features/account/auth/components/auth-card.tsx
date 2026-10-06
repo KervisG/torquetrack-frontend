@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { BrandMark } from '@/components/brand-mark'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
+import { usePageMeta } from '@/lib/page-meta'
 
 type AuthCardProps = {
   title: string
@@ -12,6 +13,8 @@ type AuthCardProps = {
 }
 
 export function AuthCard({ title, description, children, footer }: AuthCardProps) {
+  // Pantallas de cuenta: no tienen valor en un buscador.
+  usePageMeta({ title, noindex: true })
   return (
     // 75 % foto a la izquierda y 25 % el formulario a la derecha.
     // Imagen fija: en el login el movimiento compite con el formulario.

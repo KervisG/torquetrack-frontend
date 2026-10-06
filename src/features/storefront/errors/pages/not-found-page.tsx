@@ -2,8 +2,10 @@ import { Link } from 'react-router-dom'
 
 import { StorefrontButton } from '@/components/storefront-button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { usePageMeta } from '@/lib/page-meta'
 
 export function NotFoundPage() {
+  usePageMeta({ title: 'Page not found', noindex: true })
   return (
     <main className="mx-auto max-w-xl px-4 py-20 text-center">
       <Card>

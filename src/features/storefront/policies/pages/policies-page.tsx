@@ -1,10 +1,16 @@
 import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { usePageMeta } from '@/lib/page-meta'
 
 import { POLICY_PAGES } from '../policy-values'
 
 export function PoliciesPage() {
+  usePageMeta({
+    title: 'Store Policies',
+    description: 'Shipping, returns, privacy and terms for parts ordered from TorqueTrack Diesel.',
+    canonicalPath: '/policies',
+  })
   return (
     <main className="mx-auto max-w-xl px-4 py-20">
       <Card>

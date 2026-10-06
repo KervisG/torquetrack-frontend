@@ -10,8 +10,24 @@ export const CORE_RETURN_WINDOW_DAYS = 30
 export const GOVERNING_STATE = 'Florida'
 
 export const POLICY_PAGES = [
-  { to: '/policies/shipping', title: 'Shipping Policy' },
-  { to: '/policies/returns', title: 'Returns & Refunds' },
-  { to: '/policies/privacy', title: 'Privacy Policy' },
-  { to: '/policies/terms', title: 'Terms of Service' },
+  {
+    to: '/policies/shipping',
+    title: 'Shipping Policy',
+    description: 'How TorqueTrack Diesel ships diesel parts: processing times, carriers, rates and damaged deliveries.',
+  },
+  {
+    to: '/policies/returns',
+    title: 'Returns & Refunds',
+    description: 'Return window, restocking fees, core returns and refund timing for TorqueTrack Diesel orders.',
+  },
+  {
+    to: '/policies/privacy',
+    title: 'Privacy Policy',
+    description: 'What information TorqueTrack Diesel collects, how it is used and the choices you have.',
+  },
+  {
+    to: '/policies/terms',
+    title: 'Terms of Service',
+    description: 'Terms for buying from TorqueTrack Diesel: pricing, payment, core charges, fitment and emissions parts.',
+  },
 ]

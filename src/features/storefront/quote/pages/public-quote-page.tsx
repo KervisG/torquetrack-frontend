@@ -9,12 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ApiError } from '@/lib/api-client'
 import { formatDate } from '@/lib/format-date'
 import { formatMoney } from '@/lib/money'
+import { usePageMeta } from '@/lib/page-meta'
 
 import { checkoutPublicQuote, getPublicQuote } from '../api'
 import { publicQuoteKeys } from '../query-keys'
 import type { PublicQuote } from '../types'
 
 export function PublicQuotePage() {
+  // El token es el único control de acceso: la página no debe indexarse.
+  usePageMeta({ title: 'Your Quote', noindex: true })
   const { token = '' } = useParams()
   const quote = useQuery({
     queryKey: publicQuoteKeys.token(token),

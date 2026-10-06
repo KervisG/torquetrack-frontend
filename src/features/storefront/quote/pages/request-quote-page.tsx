@@ -16,10 +16,17 @@ import { listProducts } from '@/features/storefront/catalog/api'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { quoteRequestSchema, type QuoteRequestValues } from '@/lib/validators/quote-request'
 import { useCartStore } from '@/stores/cart-store'
+import { usePageMeta } from '@/lib/page-meta'
 
 import { requestQuote } from '../api'
 
 export function RequestQuotePage() {
+  usePageMeta({
+    title: 'Request a Quote',
+    description:
+      'Request a quote for diesel injectors, pumps and parts, including bulk and fleet orders. TorqueTrack Diesel replies with pricing and availability.',
+    canonicalPath: '/quote',
+  })
   const items = useCartStore((state) => state.items)
   const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
   const form = useForm<QuoteRequestValues>({

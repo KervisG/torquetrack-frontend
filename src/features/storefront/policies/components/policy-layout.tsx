@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { STORE_EMAIL, STORE_PHONE } from '@/lib/store-contact'
+import { usePageMeta } from '@/lib/page-meta'
 
 import { POLICY_LAST_UPDATED, POLICY_PAGES } from '../policy-values'
 
@@ -13,6 +14,11 @@ type PolicyLayoutProps = {
 }
 
 export function PolicyLayout({ title, intro, children }: PolicyLayoutProps) {
+  usePageMeta({
+    title,
+    description: POLICY_PAGES.find((page) => page.title === title)?.description,
+    canonicalPath: POLICY_PAGES.find((page) => page.title === title)?.to,
+  })
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
       <Card>
