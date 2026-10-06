@@ -52,3 +52,35 @@ export function dashboardOk() {
     HttpResponse.json({ counts: dashboardCounts }),
   )
 }
+
+// Sin "3" ni "$12.50" sueltos: los tests de los conteos buscan esos textos exactos.
+export const dashboardAnalytics = {
+  range: '30d',
+  granularity: 'day',
+  timeZone: 'UTC',
+  start: '2026-09-05',
+  end: '2026-10-04',
+  revenueSeries: [
+    { date: '2026-10-03', revenue: 0, orders: 0 },
+    { date: '2026-10-04', revenue: 1250, orders: 2 },
+  ],
+  kpis: {
+    revenue: { value: 1250, previous: 625, changePercent: 100 },
+    orders: { value: 2, previous: 1, changePercent: 100 },
+    averageOrderValue: { value: 625, previous: 625, changePercent: 0 },
+    refunds: { value: 40, previous: 0, changePercent: null },
+  },
+  ordersByStatus: [
+    { status: 'OPEN', count: 2 },
+    { status: 'SHIPPED', count: 0 },
+  ],
+  topProducts: [
+    { productId: 'pump', title: 'CP3 Pump', partNumber: '0445020150', units: 2, revenue: 1000 },
+  ],
+  quoteFunnel: { created: 5, sent: 4, converted: 2, conversionRate: 40 },
+  cartFunnel: { created: 6, checkoutStarted: 4, converted: 2, abandoned: 2 },
+}
+
+export function dashboardAnalyticsOk() {
+  return http.get('/api/admin/dashboard/analytics/', () => HttpResponse.json(dashboardAnalytics))
+}

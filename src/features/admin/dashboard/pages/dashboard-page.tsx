@@ -1,25 +1,24 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { Archive, DollarSign, FilePen, FileText, Package, Rocket, ShoppingCart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { PageHeader } from '@/components/app-shell/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/empty-state'
+import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api-client'
-import { useSession } from '@/features/account/auth/hooks/use-session'
+import { formatMoney } from '@/lib/money'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
-import { hasAdminPermission } from '@/features/admin/auth/types'
+import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
 
 import { getDashboard } from '../api'
+import { AnalyticsSection } from '../components/analytics-section'
+import { StatTile, StatTileSkeleton } from '../components/stat-tile'
 import { dashboardKeys } from '../query-keys'
-
-const money = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-})
+import type { DashboardResponse } from '../types'
 
 export function DashboardPage() {
-  const session = useSession()
-  const user = session.data?.user
-  const allowed = user ? hasAdminPermission(user, 'dashboard.view') : false
+  const { can } = useAdminPermissions()
+  const allowed = can('dashboard.view')
   const dashboard = useQuery({
     queryKey: dashboardKeys.counts(),
     queryFn: getDashboard,
@@ -32,82 +31,138 @@ export function DashboardPage() {
     )
   }
 
-  const header = <PageHeader title="Dashboard" description="Store activity at a glance." />
-
-  if (dashboard.isPending) {
-    return (
-      <section>
-        {header}
-        <p className="text-sm text-muted-foreground">Loading dashboard…</p>
-      </section>
-    )
-  }
-
-  if (dashboard.error) {
-    const message =
-      dashboard.error instanceof ApiError
-        ? dashboard.error.message
-        : 'Could not load dashboard.'
-    return (
-      <section>
-        {header}
-        <p className="text-sm text-destructive">{message}</p>
-      </section>
-    )
-  }
-
-  const counts = dashboard.data.counts
-  // Un conteo enlaza a su pantalla solo si el rol puede abrirla.
-  const canOrders = user ? hasAdminPermission(user, 'orders.view') : false
-  const canQuotes = user ? hasAdminPermission(user, 'quotes.view') : false
-  const canCarts = user ? hasAdminPermission(user, 'carts.view') : false
-
   return (
-    <section>
-      {header}
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Metric
-          label="Orders"
-          value={String(counts.orders)}
-          to={canOrders ? '/admin/orders' : undefined}
+    <section className="space-y-8">
+      <PageHeader title="Dashboard" description="Store activity at a glance." />
+      <Counters
+        query={dashboard}
+        canOrders={can('orders.view')}
+        canQuotes={can('quotes.view')}
+        canCarts={can('carts.view')}
+      />
+      {dashboard.data && isEmptyStore(dashboard.data) ? (
+        <GettingStarted
+          canProducts={can('products.edit')}
+          canQuotes={can('quotes.create')}
+          canCustomers={can('customers.edit')}
         />
-        <Metric
-          label="Active quotes"
-          value={String(counts.activeQuotes)}
-          to={canQuotes ? '/admin/quotes?status=ACTIVE' : undefined}
-        />
-        <Metric
-          label="Building quotes"
-          value={String(counts.buildingQuotes)}
-          to={canQuotes ? '/admin/quotes?status=BUILDING' : undefined}
-        />
-        <Metric
-          label="Active carts"
-          value={String(counts.activeCarts)}
-          to={canCarts ? '/admin/carts?status=ACTIVE' : undefined}
-        />
-        <Metric
-          label="Abandoned carts"
-          value={String(counts.abandonedCarts)}
-          to={canCarts ? '/admin/carts?status=ABANDONED' : undefined}
-        />
-        <Metric label="Sales today" value={money.format(counts.salesToday)} />
-      </ul>
+      ) : null}
+      <AnalyticsSection />
     </section>
   )
 }
 
-function Metric({ label, value, to }: { label: string; value: string; to?: string }) {
-  const card = (
-    <Card className={to ? 'transition-colors hover:border-foreground/40' : undefined}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-2xl font-semibold">{value}</p>
-      </CardContent>
-    </Card>
-  )
+// Sin pedidos ni cotizaciones la tienda recién arranca: se ofrecen los
+// primeros pasos en lugar de una fila de ceros.
+function isEmptyStore(data: DashboardResponse): boolean {
+  const { orders, activeQuotes, buildingQuotes } = data.counts
+  return orders === 0 && activeQuotes === 0 && buildingQuotes === 0
+}
 
-  return <li>{to ? <Link to={to} className="block">{card}</Link> : card}</li>
+function GettingStarted({
+  canProducts,
+  canQuotes,
+  canCustomers,
+}: {
+  canProducts: boolean
+  canQuotes: boolean
+  canCustomers: boolean
+}) {
+  if (!canProducts && !canQuotes && !canCustomers) return null
+  return (
+    <EmptyState
+      icon={Rocket}
+      title="No orders or quotes yet"
+      description="Set up your catalog and customers to start quoting and selling."
+      action={
+        <div className="flex flex-wrap justify-center gap-2">
+          {canProducts ? (
+            <Button asChild>
+              <Link to="/admin/products?new=1">Add your first product</Link>
+            </Button>
+          ) : null}
+          {canQuotes ? (
+            <Button asChild variant={canProducts ? 'outline' : 'default'}>
+              <Link to="/admin/quotes?new=1">Create a quote</Link>
+            </Button>
+          ) : null}
+          {canCustomers ? (
+            <Button asChild variant={canProducts || canQuotes ? 'outline' : 'default'}>
+              <Link to="/admin/customers?new=1">Add customer</Link>
+            </Button>
+          ) : null}
+        </div>
+      }
+    />
+  )
+}
+
+const COUNTERS_GRID = 'grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6'
+
+function Counters({
+  query,
+  canOrders,
+  canQuotes,
+  canCarts,
+}: {
+  query: UseQueryResult<DashboardResponse>
+  canOrders: boolean
+  canQuotes: boolean
+  canCarts: boolean
+}) {
+  if (query.isPending) {
+    return (
+      <div aria-busy="true">
+        <p className="sr-only">Loading dashboard…</p>
+        <ul className={COUNTERS_GRID}>
+          {Array.from({ length: 6 }, (_, index) => (
+            <StatTileSkeleton key={index} />
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  if (query.error) {
+    const message = query.error instanceof ApiError ? query.error.message : 'Could not load dashboard.'
+    return <p className="text-sm text-destructive">{message}</p>
+  }
+
+  const counts = query.data.counts
+  // Un conteo enlaza a su pantalla solo si el rol puede abrirla.
+  return (
+    <ul className={COUNTERS_GRID} aria-label="Right now">
+      <StatTile label="Orders" value={String(counts.orders)} icon={Package} to={canOrders ? '/admin/orders' : undefined} />
+      <StatTile
+        label="Active quotes"
+        value={String(counts.activeQuotes)}
+        icon={FileText}
+        to={canQuotes ? '/admin/quotes?status=ACTIVE' : undefined}
+      />
+      <StatTile
+        label="Building quotes"
+        value={String(counts.buildingQuotes)}
+        icon={FilePen}
+        to={canQuotes ? '/admin/quotes?status=BUILDING' : undefined}
+      />
+      <StatTile
+        label="Active carts"
+        value={String(counts.activeCarts)}
+        icon={ShoppingCart}
+        to={canCarts ? '/admin/carts?status=ACTIVE' : undefined}
+      />
+      <StatTile
+        label="Abandoned carts"
+        value={String(counts.abandonedCarts)}
+        icon={Archive}
+        to={canCarts ? '/admin/carts?status=ABANDONED' : undefined}
+      />
+      <StatTile
+        label="Sales today"
+        value={formatMoney(counts.salesToday)}
+        icon={DollarSign}
+        to={canOrders ? '/admin/orders?date=today' : undefined}
+      />
+    </ul>
+  )
 }

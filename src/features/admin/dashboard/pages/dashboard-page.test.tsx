@@ -1,11 +1,12 @@
 import { http, HttpResponse } from 'msw'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import {
   authenticatedSession,
   customerUser,
+  dashboardAnalyticsOk,
   dashboardOk,
   sessionUser,
 } from '@/test/admin-handlers'
@@ -14,29 +15,36 @@ import { productsOk } from '@/test/catalog-handlers'
 import { server } from '@/test/msw-server'
 import { renderApp } from '@/test/render-app'
 
+// `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
+// por intento y con la suite en paralelo agota el timeout; se espera con queries
+// baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
 describe('DashboardPage', () => {
   it('renders the counts returned by the API', async () => {
-    server.use(authenticatedSession(), dashboardOk())
+    server.use(authenticatedSession(), dashboardOk(), dashboardAnalyticsOk())
     renderApp('/admin')
 
-    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(await screen.findByText('Dashboard', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(await screen.findByText('3')).toBeInTheDocument()
     expect(screen.getByText('$12.50')).toBeInTheDocument()
   })
 
   it('links each count to its screen', async () => {
-    server.use(authenticatedSession(), dashboardOk())
+    server.use(authenticatedSession(), dashboardOk(), dashboardAnalyticsOk())
     renderApp('/admin')
 
-    expect(await screen.findByRole('link', { name: /^Orders\s*3$/ })).toHaveAttribute(
+    // `*ByRole` sobre todo el panel (shell + analítica) tarda cientos de ms por
+    // intento; con la suite en paralelo `findByRole` agota el timeout. Se espera
+    // la lista de conteos con una query barata y los roles se buscan dentro.
+    const counts = within(await screen.findByLabelText('Right now'))
+    expect(counts.getByRole('link', { name: /^Orders\s*3$/ })).toHaveAttribute(
       'href',
       '/admin/orders',
     )
-    expect(screen.getByRole('link', { name: /^Active quotes/ })).toHaveAttribute(
+    expect(counts.getByRole('link', { name: /^Active quotes/ })).toHaveAttribute(
       'href',
       '/admin/quotes?status=ACTIVE',
     )
-    expect(screen.getByRole('link', { name: /^Building quotes/ })).toHaveAttribute(
+    expect(counts.getByRole('link', { name: /^Building quotes/ })).toHaveAttribute(
       'href',
       '/admin/quotes?status=BUILDING',
     )
@@ -49,13 +57,14 @@ describe('DashboardPage', () => {
         role: { slug: 'sales', name: 'Sales', fullAccess: false },
         permissions: ['dashboard.view'],
       }),
-      dashboardOk(),
+      dashboardOk(), dashboardAnalyticsOk(),
     )
     renderApp('/admin')
 
-    expect(await screen.findByText('Active quotes')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /^Active quotes/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /^Orders/ })).not.toBeInTheDocument()
+    const counts = within(await screen.findByLabelText('Right now'))
+    expect(counts.getByText('Active quotes')).toBeInTheDocument()
+    expect(counts.queryByRole('link', { name: /^Active quotes/ })).not.toBeInTheDocument()
+    expect(counts.queryByRole('link', { name: /^Orders/ })).not.toBeInTheDocument()
   })
 
   it('shows the API error when the dashboard fails', async () => {
@@ -64,6 +73,7 @@ describe('DashboardPage', () => {
       http.get('/api/admin/dashboard/', () =>
         HttpResponse.json({ error: 'Forbidden' }, { status: 403 }),
       ),
+      dashboardAnalyticsOk(),
     )
     renderApp('/admin')
 
@@ -98,14 +108,14 @@ describe('DashboardPage', () => {
     )
     renderApp('/admin')
 
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(await screen.findByText('Sign in', { selector: 'h1, h2, h3' })).toBeInTheDocument()
   })
 
   it('sends a signed-in customer without role to their account', async () => {
     server.use(authenticatedSession(customerUser), productsOk(), accountOk())
     renderApp('/admin')
 
-    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
+    expect(await screen.findByText('Profile', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Dashboard' })).not.toBeInTheDocument()
   })
 
@@ -116,11 +126,11 @@ describe('DashboardPage', () => {
         role: { slug: 'sales', name: 'Sales', fullAccess: false },
         permissions: ['dashboard.view'],
       }),
-      dashboardOk(),
+      dashboardOk(), dashboardAnalyticsOk(),
     )
     renderApp('/admin')
 
-    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(await screen.findByText('Dashboard', { selector: 'h1, h2, h3' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument()
   })
 
@@ -136,14 +146,14 @@ describe('DashboardPage', () => {
         signedIn = false
         return HttpResponse.json({ ok: true })
       }),
-      dashboardOk(),
+      dashboardOk(), dashboardAnalyticsOk(),
     )
     renderApp('/admin')
 
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: 'Account menu' }))
+    await user.click(await screen.findByLabelText('Account menu', { selector: 'button' }))
     await user.click(screen.getByRole('button', { name: 'Sign out' }))
 
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(await screen.findByText('Sign in', { selector: 'h1, h2, h3' })).toBeInTheDocument()
   })
 })

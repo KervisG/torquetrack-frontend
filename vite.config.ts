@@ -37,7 +37,15 @@ export default defineConfig({
               test: /node_modules[\\/]\.pnpm[\\/](react|react-dom|react-router|scheduler)@/,
               priority: 2,
             },
-            { name: 'vendor', test: /node_modules/, priority: 1 },
+            // Recharts y las dependencias que solo usa él quedan fuera de `vendor`
+            // (que carga la tienda): sin grupo, Rolldown las deja en el chunk lazy
+            // del dashboard. Un grupo propio no sirve: arrastra sus dependencias
+            // (react, clsx) y la tienda terminaría precargándolo.
+            {
+              name: 'vendor',
+              test: /^(?!.*node_modules[\\/]\.pnpm[\\/](?:recharts|victory-vendor|d3-[a-z-]+|internmap|@reduxjs\+toolkit|react-redux|redux|redux-thunk|reselect|immer|decimal\.js-light|es-toolkit|eventemitter3|tiny-invariant|use-sync-external-store|react-is)@).*node_modules[\\/]/,
+              priority: 1,
+            },
           ],
         },
       },

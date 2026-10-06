@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import {
   authenticatedSession,
   customerUser,
+  dashboardAnalyticsOk,
   dashboardOk,
   sessionUser,
   unauthorizedSession,
@@ -47,7 +48,7 @@ async function signIn(email: string, password: string) {
 
 describe('LoginPage', () => {
   it('sends staff to the admin dashboard', async () => {
-    server.use(...loginFlow(sessionUser), dashboardOk())
+    server.use(...loginFlow(sessionUser), dashboardOk(), dashboardAnalyticsOk())
     renderApp('/login')
 
     await signIn('ada@example.com', 'secret')
@@ -102,7 +103,7 @@ describe('LoginPage', () => {
   })
 
   it('skips the form for a signed-in staff member', async () => {
-    server.use(authenticatedSession(), dashboardOk())
+    server.use(authenticatedSession(), dashboardOk(), dashboardAnalyticsOk())
     renderApp('/login')
 
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
