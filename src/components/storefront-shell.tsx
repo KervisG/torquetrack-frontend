@@ -19,7 +19,10 @@ import {
 } from '@/components/ui/sheet'
 import { useSession } from '@/features/account/auth/hooks/use-session'
 import { listProducts } from '@/features/storefront/catalog/api'
+import { productPath } from '@/features/storefront/catalog/product-path'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
+import { VehicleHeaderButton } from '@/features/storefront/garage/components/vehicle-header-button'
+import { VehicleSelectorDialog } from '@/features/storefront/garage/components/vehicle-selector-dialog'
 import { POLICY_PAGES } from '@/features/storefront/policies/policy-values'
 import { formatMoney } from '@/lib/money'
 import { STORE_EMAIL, STORE_PHONE } from '@/lib/store-contact'
@@ -71,6 +74,7 @@ export function StorefrontShell() {
               <Phone className="inline size-4 sm:mr-1.5" />
               <span className="max-sm:hidden">{STORE_PHONE.display}</span>
             </a>
+            <VehicleHeaderButton />
             <AccountNav />
             <StorefrontButton
               type="button"
@@ -80,9 +84,12 @@ export function StorefrontShell() {
             >
               <ShoppingCart className="size-4" />
               <span className="max-sm:sr-only">Cart</span>
-              <Badge className="border-transparent bg-amber-500 text-neutral-950 hover:bg-amber-500">
-                {count}
-              </Badge>
+              {/* Vacío no lleva contador: un "0" naranja parece un aviso. */}
+              {count > 0 ? (
+                <Badge className="border-transparent bg-amber-500 text-neutral-950 hover:bg-amber-500">
+                  {count}
+                </Badge>
+              ) : null}
             </StorefrontButton>
           </nav>
         </div>
@@ -126,6 +133,7 @@ export function StorefrontShell() {
           </nav>
         </div>
       </footer>
+      <VehicleSelectorDialog />
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
           <SheetHeader>
@@ -141,7 +149,7 @@ export function StorefrontShell() {
                 {rows.map((row) => (
                   <li key={row.id} className="flex gap-3 py-3">
                     <Link
-                      to={`/product/${row.id}`}
+                      to={productPath(row)}
                       className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-md bg-muted"
                       onClick={() => setDrawerOpen(false)}
                     >

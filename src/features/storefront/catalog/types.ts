@@ -1,5 +1,7 @@
 export type Product = {
   id: string
+  // URL legible para la ficha; el backend acepta slug o id en el detalle.
+  slug?: string
   title?: string
   category?: string
   type?: string
@@ -18,6 +20,9 @@ export type Product = {
   oemPart?: string
   aftermarketPart?: string
   remanPart?: string
+  // Ids de `/api/applications/` que el catálogo marcó como compatibles. No
+  // todos los productos los traen; sin ellos el fitment se deduce del texto.
+  applicationIds?: string[]
   description?: string
   warranty?: string
   stock?: string
@@ -43,6 +48,10 @@ export type VinVehicle = {
   model: string
   engine: string
 }
+
+// Vehículo para filtrar por fitment: el de un VIN, o el elegido por año,
+// marca, modelo y motor (ese trae el id de la aplicación y `vin` vacío).
+export type FitVehicle = VinVehicle & { applicationId?: string }
 
 export type ShippingRate = {
   id?: string
