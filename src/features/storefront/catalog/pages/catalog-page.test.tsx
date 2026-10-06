@@ -13,7 +13,13 @@ describe('CatalogPage', () => {
       http.get('/api/products/', () =>
         HttpResponse.json([
           sampleProduct,
-          { ...sampleProduct, id: 'ford-turbo', title: 'Ford Power Stroke Turbo', make: 'Ford' },
+          {
+            ...sampleProduct,
+            id: 'ford-turbo',
+            title: 'Ford Power Stroke Turbo',
+            make: 'Ford',
+            manufacturer: 'Garrett',
+          },
         ]),
       ),
     )
@@ -24,7 +30,7 @@ describe('CatalogPage', () => {
     expect(screen.getByText('Ford Power Stroke Turbo')).toBeInTheDocument()
     expect(screen.getByText('2 results')).toBeInTheDocument()
 
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Brand' }), 'Ford')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Brand' }), 'Garrett')
 
     expect(screen.queryByText(sampleProduct.title)).not.toBeInTheDocument()
     expect(screen.getByText('Ford Power Stroke Turbo')).toBeInTheDocument()
