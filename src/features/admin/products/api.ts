@@ -1,4 +1,4 @@
-import { apiRequest } from '@/lib/api-client'
+import { ApiError, apiRequest } from '@/lib/api-client'
 import { optionalNumber, type AdminProductValues } from '@/lib/validators/admin-product'
 
 import type { AdminApplication, AdminProduct } from './types'
@@ -87,6 +87,32 @@ export function activateAdminProduct(id: string): Promise<{ ok: true }> {
     method: 'PUT',
     body: JSON.stringify({ active: true }),
   })
+}
+
+const EXPORT_FALLBACK_FILE_NAME = 'torquetrack-catalog.zip'
+
+function exportFileName(disposition: string | null): string {
+  const match = /filename="?([^";]+)"?/i.exec(disposition ?? '')
+  return match?.[1]?.trim() || EXPORT_FALLBACK_FILE_NAME
+}
+
+// ZIP del catálogo (productos, aplicaciones e imágenes locales) para cargarlo
+// en otro servidor con `import_catalog`. No usa `apiRequest`: ese cliente
+// fuerza JSON y corta a los 10 s, y el ZIP es binario y puede tardar más.
+export async function exportAdminProducts(): Promise<{ blob: Blob; fileName: string }> {
+  const response = await fetch('/api/admin/products/export/', { credentials: 'include' })
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    const message =
+      body && typeof body === 'object' && 'error' in body && typeof body.error === 'string'
+        ? body.error
+        : 'Export failed'
+    throw new ApiError(message, response.status)
+  }
+  return {
+    blob: await response.blob(),
+    fileName: exportFileName(response.headers.get('Content-Disposition')),
+  }
 }
 
 export function productPayload(

@@ -16,6 +16,7 @@ import type { AdminProductValues } from '@/lib/validators/admin-product'
 import {
   activateAdminProduct,
   deactivateAdminProduct,
+  exportAdminProducts,
   listAdminProducts,
   productPayload,
   saveAdminProduct,
@@ -43,6 +44,18 @@ function productIdFromTitle(title: string): string {
     .slice(0, 48)
   const suffix = crypto.randomUUID().slice(0, 8)
   return slug ? `${slug}-${suffix}` : `product-${suffix}`
+}
+
+function saveFile(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.append(link)
+  link.click()
+  link.remove()
+  // El click ya entregó el archivo al navegador; se libera la memoria del Blob.
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 // En pantallas chicas la tabla no cabe: arranca en tarjetas y desde `md` en
@@ -90,6 +103,10 @@ export function ProductsPage() {
       await queryClient.invalidateQueries({ queryKey: adminProductKeys.all })
     },
   })
+  const exportCatalog = useMutation({
+    mutationFn: exportAdminProducts,
+    onSuccess: ({ blob, fileName }) => saveFile(blob, fileName),
+  })
   const activate = useMutation({
     mutationFn: (product: AdminProduct) => activateAdminProduct(product.id),
     onSuccess: async () => {
@@ -129,13 +146,24 @@ export function ProductsPage() {
         title="Products"
         description="Catalog parts, pricing, fitment, and shipping dimensions."
         actions={
-          canEdit ? (
-            <Button type="button" onClick={() => openNew()}>
-              New product
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={exportCatalog.isPending}
+              onClick={() => exportCatalog.mutate()}
+            >
+              {exportCatalog.isPending ? 'Exporting…' : 'Export'}
             </Button>
-          ) : null
+            {canEdit ? (
+              <Button type="button" onClick={() => openNew()}>
+                New product
+              </Button>
+            ) : null}
+          </div>
         }
       />
+      {exportCatalog.error ? <FormError error={exportCatalog.error} /> : null}
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1">
