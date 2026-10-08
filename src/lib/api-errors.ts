@@ -82,6 +82,14 @@ const RULES: Rule[] = [
 
 const GENERIC = 'Something went wrong. Try again.'
 
+function isTimeout(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
+function isOffline(error: unknown): boolean {
+  return error instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(error.message)
+}
+
 // `part_number` → `partNumber`: los formularios usan camelCase.
 function toCamelCase(value: string): string {
   return value.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase())
@@ -90,7 +98,11 @@ function toCamelCase(value: string): string {
 export type FriendlyApiError = { message: string; field?: string }
 
 export function friendlyApiError(error: unknown): FriendlyApiError {
-  if (!(error instanceof ApiError)) return { message: GENERIC }
+  if (!(error instanceof ApiError)) {
+    if (isTimeout(error)) return { message: 'The server took too long to respond. Try again.' }
+    if (isOffline(error)) return { message: 'Could not reach the server. Try again.' }
+    return { message: GENERIC }
+  }
   const raw = error.message.trim()
   for (const rule of RULES) {
     const match = raw.match(rule.pattern)

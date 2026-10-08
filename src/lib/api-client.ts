@@ -13,6 +13,11 @@ export class ApiError extends Error {
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE'])
 
+// Render en el plan gratuito tarda más de 10 s en despertar. Cortar a los 10 s
+// aborta la petición que lo está encendiendo y el panel muestra
+// "Something went wrong" al cargar o guardar.
+const REQUEST_TIMEOUT_MS = 60_000
+
 function withTrailingSlash(path: string): string {
   const [pathname, query] = path.split('?')
   const normalized = pathname.endsWith('/') ? pathname : `${pathname}/`
@@ -69,8 +74,8 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     credentials: 'include',
     // La señal del llamador (cancelar una consulta vieja) no quita el timeout.
     signal: init?.signal
-      ? AbortSignal.any([init.signal, AbortSignal.timeout(10_000)])
-      : AbortSignal.timeout(10_000),
+      ? AbortSignal.any([init.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
+      : AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'X-CSRFToken': token } : {}),

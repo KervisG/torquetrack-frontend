@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/app-shell/page-header'
 import { Button } from '@/components/ui/button'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
+import { ApiError } from '@/lib/api-client'
 import type { AdminProductValues } from '@/lib/validators/admin-product'
 
 import {
@@ -36,13 +37,19 @@ function matches(product: AdminProduct, search: string): boolean {
     .some((value) => String(value).toLowerCase().includes(needle))
 }
 
+function randomSuffix(): string {
+  const bytes = new Uint8Array(4)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
 function productIdFromTitle(title: string): string {
   const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 48)
-  const suffix = crypto.randomUUID().slice(0, 8)
+  const suffix = randomSuffix()
   return slug ? `${slug}-${suffix}` : `product-${suffix}`
 }
 
@@ -85,6 +92,11 @@ export function ProductsPage() {
     enabled: allowed,
   })
   const save = useMutation({
+    // El alta es un PUT por id: repetirlo no crea otro producto. Un 4xx (precio,
+    // permiso) no se reintenta; un timeout o un 5xx sí, como cuando el servidor
+    // todavía está despertando.
+    retry: (failureCount, error) =>
+      failureCount < 3 && !(error instanceof ApiError && error.status < 500),
     mutationFn: (values: AdminProductValues) => {
       const id = editing?.id ?? productIdFromTitle(values.title)
       return saveAdminProduct(

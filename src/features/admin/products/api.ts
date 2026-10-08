@@ -98,7 +98,7 @@ function exportFileName(disposition: string | null): string {
 
 // ZIP del catálogo (productos, aplicaciones e imágenes locales) para cargarlo
 // en otro servidor con `import_catalog`. No usa `apiRequest`: ese cliente
-// fuerza JSON y corta a los 10 s, y el ZIP es binario y puede tardar más.
+// fuerza JSON, y el ZIP es binario y puede tardar más que una petición normal.
 export async function exportAdminProducts(): Promise<{ blob: Blob; fileName: string }> {
   const response = await fetch('/api/admin/products/export/', { credentials: 'include' })
   if (!response.ok) {
