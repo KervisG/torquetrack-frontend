@@ -19,6 +19,7 @@ import { OrderStatusForm } from '../components/order-status-form'
 import { OrderWizard } from '../components/order-wizard'
 import { PaymentActions } from '../components/payment-actions'
 import { RefundForm } from '../components/refund-form'
+import { ShippingMethodField } from '../components/shipping-method-field'
 import { adminOrderKeys } from '../query-keys'
 import {
   CHARGED_PAYMENT_STATUSES,
@@ -115,10 +116,20 @@ export function OrderDetailPage() {
                     <CustomerDetails customer={order.customer} />
                   </Section>
                   <Section title="Shipping & vehicle">
-                    <dl className="space-y-3 text-sm">
-                      <Detail label="Shipping method" value={order.shippingMethod} />
+                    <div className="space-y-3 text-sm">
+                      {canChangeStatus ? (
+                        <ShippingMethodField
+                          orderId={order.id}
+                          method={order.shippingMethodCode}
+                          currentLabel={
+                            order.shippingMethodCode ? '' : order.shippingMethod
+                          }
+                        />
+                      ) : (
+                        <Detail label="Shipping method" value={order.shippingMethod} />
+                      )}
                       <Detail label="Vehicle" value={vehicleLabel(order)} />
-                    </dl>
+                    </div>
                   </Section>
                 </div>
                 <Section title="Items">

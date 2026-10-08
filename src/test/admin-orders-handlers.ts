@@ -80,11 +80,24 @@ export function ordersBackend(initial: OrderApiRow[]) {
       return HttpResponse.json(orders)
     }),
     http.patch('/api/admin/orders/:id/', async ({ params, request }) => {
-      const body = (await request.json()) as { status: string }
+      const body = (await request.json()) as { status?: string; shippingMethod?: string }
       calls.push({ method: 'PATCH', path: `/api/admin/orders/${params.id}/`, body })
       const index = orders.findIndex((order) => order.id === params.id)
-      orders[index] = { ...orders[index], status: body.status }
-      return HttpResponse.json({ ok: true, status: body.status })
+      const current = orders[index]
+      let next = current
+      if (typeof body.status === 'string') next = { ...next, status: body.status }
+      if (typeof body.shippingMethod === 'string') {
+        const shipping =
+          current.shipping && typeof current.shipping === 'object'
+            ? { ...(current.shipping as Record<string, unknown>) }
+            : {}
+        next = {
+          ...next,
+          shipping: { ...shipping, method: body.shippingMethod },
+        }
+      }
+      orders[index] = next
+      return HttpResponse.json({ ok: true, status: body.status, shippingMethod: body.shippingMethod })
     }),
     http.post('/api/admin/orders/:id/payment-link/', ({ params }) => {
       calls.push({ method: 'POST', path: `/api/admin/orders/${params.id}/payment-link/` })

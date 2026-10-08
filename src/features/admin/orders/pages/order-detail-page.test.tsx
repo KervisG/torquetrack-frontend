@@ -173,4 +173,25 @@ describe('OrderDetailPage', () => {
 
     expect(await screen.findByText('Order not found.')).toBeInTheDocument()
   })
+
+  it('lets staff pick Next Day Air, 2nd Day Air or free ground', async () => {
+    const backend = ordersBackend([orderRow({ shipping: undefined })])
+    server.use(authenticatedSession(), ...backend.handlers)
+    renderApp('/admin/orders/OID1')
+
+    const page = await findOrderPage()
+    const method = page.getByLabelText('Shipping method')
+    expect(within(method).getByRole('option', { name: 'Next Day Air' })).toBeInTheDocument()
+    expect(within(method).getByRole('option', { name: '2nd Day Air' })).toBeInTheDocument()
+    expect(within(method).getByRole('option', { name: 'Regular Ground (Free)' })).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.selectOptions(method, 'Regular Ground (Free)')
+
+    expect(backend.calls).toContainEqual({
+      method: 'PATCH',
+      path: '/api/admin/orders/OID1/',
+      body: { shippingMethod: 'GROUND' },
+    })
+  })
 })

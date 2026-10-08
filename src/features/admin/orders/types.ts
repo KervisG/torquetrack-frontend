@@ -67,6 +67,24 @@ export type OrderRefund = {
   createdAt: Date
 }
 
+// El checkout guarda transportista y servicio. Una cotización convertida en
+// pedido no trae método: el panel elige uno de estos. Regular Ground no se cobra.
+export const SHIPPING_METHODS = [
+  { value: 'NEXT_DAY_AIR', label: 'Next Day Air' },
+  { value: 'SECOND_DAY_AIR', label: '2nd Day Air' },
+  { value: 'GROUND', label: 'Regular Ground (Free)' },
+] as const
+
+export type ShippingMethod = (typeof SHIPPING_METHODS)[number]['value']
+
+const SHIPPING_METHOD_LABELS: Record<string, string> = Object.fromEntries(
+  SHIPPING_METHODS.map((method) => [method.value, method.label]),
+)
+
+export function shippingMethodLabel(code: string): string {
+  return SHIPPING_METHOD_LABELS[code] ?? ''
+}
+
 export type AdminOrder = {
   id: string
   number: string
@@ -76,9 +94,10 @@ export type AdminOrder = {
   customer: OrderCustomer
   items: LineItem[]
   totals: DocumentTotals
-  // Transportista y servicio elegidos en el checkout; vacío en un pedido
-  // convertido desde una cotización.
+  // Etiqueta para mostrar. Vacía cuando el pedido viene de una cotización.
   shippingMethod: string
+  // Código de `SHIPPING_METHODS`, o vacío si el método vino del checkout.
+  shippingMethodCode: string
   vehicle: { vin: string; year: string; make: string; model: string; engine: string }
   quoteNumber: string
   payments: OrderPayment[]

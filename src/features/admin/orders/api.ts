@@ -3,7 +3,13 @@ import type { DocumentTotals } from '@/features/account/portal/types'
 import { apiRequest } from '@/lib/api-client'
 import { toFulfillmentStatus, type Carrier } from '@/lib/fulfillment'
 
-import type { AdminOrder, OrderCustomer, OrderRefund } from './types'
+import {
+  shippingMethodLabel,
+  type AdminOrder,
+  type OrderCustomer,
+  type OrderRefund,
+  type ShippingMethod,
+} from './types'
 
 type RawRecord = Record<string, unknown>
 
@@ -85,14 +91,21 @@ function toCustomer(raw: RawRecord | null | undefined): OrderCustomer {
   }
 }
 
-function shippingMethod(shipping: unknown): string {
-  if (!shipping || typeof shipping !== 'object') return ''
-  const { carrier, service } = shipping as RawRecord
-  return [text(carrier), text(service)].filter(Boolean).join(' · ')
+function shippingMethod(shipping: unknown): { code: string; label: string } {
+  if (!shipping || typeof shipping !== 'object') return { code: '', label: '' }
+  const record = shipping as RawRecord
+  const code = text(record.method)
+  const known = shippingMethodLabel(code)
+  if (known) return { code, label: known }
+  return {
+    code: '',
+    label: [text(record.carrier), text(record.service)].filter(Boolean).join(' · '),
+  }
 }
 
 function toOrder(row: RawOrder): AdminOrder {
   const vehicle = row.vehicle ?? {}
+  const method = shippingMethod(row.shipping)
   return {
     id: row.id,
     number: row.number,
@@ -102,7 +115,8 @@ function toOrder(row: RawOrder): AdminOrder {
     customer: toCustomer(row.customer),
     items: (row.items ?? []).map(toLineItem),
     totals: row.totals ?? {},
-    shippingMethod: shippingMethod(row.shipping),
+    shippingMethod: method.label,
+    shippingMethodCode: method.code,
     vehicle: {
       vin: text(vehicle.vin),
       year: text(vehicle.year),
@@ -135,6 +149,16 @@ export type OrderDateFilter = 'today'
 export async function listOrders(date?: OrderDateFilter): Promise<AdminOrder[]> {
   const rows = await apiRequest<RawOrder[]>(date ? `/admin/orders?date=${date}` : '/admin/orders')
   return rows.map(toOrder)
+}
+
+export function updateShippingMethod(
+  id: string,
+  shippingMethod: ShippingMethod,
+): Promise<{ ok: true; shippingMethod: ShippingMethod }> {
+  return apiRequest(`/admin/orders/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ shippingMethod }),
+  })
 }
 
 export function updateOrderStatus(id: string, status: string): Promise<{ ok: true; status: string }> {
