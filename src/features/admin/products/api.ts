@@ -1,7 +1,7 @@
 import { ApiError, apiRequest } from '@/lib/api-client'
 import { optionalNumber, type AdminProductValues } from '@/lib/validators/admin-product'
 
-import type { AdminApplication, AdminProduct } from './types'
+import type { AdminApplication, AdminProduct, AdminProductImage } from './types'
 
 function num(value: unknown): number | undefined {
   const parsed = Number(value)
@@ -51,7 +51,40 @@ function toProduct(row: Record<string, unknown>): AdminProduct {
     packageWidth: num(row.packageWidth),
     packageHeight: num(row.packageHeight),
     applicationIds: Array.isArray(row.applicationIds) ? row.applicationIds.map(String) : [],
+    images: Array.isArray(row.images) ? (row.images as AdminProductImage[]) : [],
   }
+}
+
+type Gallery = { ok: true; images: AdminProductImage[] }
+
+function imagesPath(productId: string): string {
+  return `/admin/products/${encodeURIComponent(productId)}/images`
+}
+
+// Mismo tope que el backend: una foto más pesada ni se manda.
+export const MAX_PRODUCT_IMAGE_BYTES = 4 * 1024 * 1024
+export const PRODUCT_IMAGE_TYPES = 'image/jpeg,image/png,image/webp'
+
+// Cada llamada devuelve la galería completa, ya ordenada. La primera foto es
+// la portada del producto.
+export async function uploadProductImage(productId: string, file: File): Promise<AdminProductImage[]> {
+  const body = new FormData()
+  body.append('file', file)
+  const gallery = await apiRequest<Gallery>(imagesPath(productId), { method: 'POST', body })
+  return gallery.images
+}
+
+export async function deleteProductImage(productId: string, imageId: number): Promise<AdminProductImage[]> {
+  const gallery = await apiRequest<Gallery>(`${imagesPath(productId)}/${imageId}`, { method: 'DELETE' })
+  return gallery.images
+}
+
+export async function reorderProductImages(productId: string, order: number[]): Promise<AdminProductImage[]> {
+  const gallery = await apiRequest<Gallery>(imagesPath(productId), {
+    method: 'PATCH',
+    body: JSON.stringify({ order }),
+  })
+  return gallery.images
 }
 
 export async function listAdminProducts(): Promise<AdminProduct[]> {
@@ -165,5 +198,7 @@ export function productPayload(
     delete payload.purchaseCost
   }
   delete payload.id
+  // La galería tiene sus propios endpoints: no viaja con el producto.
+  delete payload.images
   return payload
 }

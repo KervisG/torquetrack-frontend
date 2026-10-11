@@ -77,7 +77,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
       ? AbortSignal.any([init.signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)])
       : AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
-      'Content-Type': 'application/json',
+      // Con un `FormData` (subir una foto) el navegador pone el
+      // `multipart/form-data` con su boundary: no se pisa.
+      ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { 'X-CSRFToken': token } : {}),
       ...init?.headers,
     },

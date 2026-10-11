@@ -6,7 +6,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontButton } from '@/components/storefront-button'
 import { getProduct } from '@/features/storefront/catalog/api'
-import { ProductPhoto } from '@/features/storefront/catalog/components/product-photo'
+import { ProductGallery } from '@/features/storefront/catalog/components/product-gallery'
 import {
   categoryLabel,
   isEmissionsCategory,
@@ -83,16 +83,7 @@ export function ProductPage() {
     // La ficha de compra va en su columna y se queda fija al bajar.
     <main className="mx-auto grid max-w-7xl items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.15fr)_18rem]">
       <ProductSeo product={item} />
-      <div className="h-[28rem] overflow-hidden rounded-md border bg-neutral-100 lg:sticky lg:top-24 lg:h-[32rem] lg:self-start">
-        <ProductPhoto
-          src={item.image}
-          partNumber={item.partNumber}
-          category={item.category}
-          brand={item.manufacturer}
-          size="large"
-          className="h-full w-full object-contain p-8"
-        />
-      </div>
+      <ProductGallery product={item} />
       <div>
         <StorefrontButton asChild tone="link" className="px-0 text-neutral-500">
           <Link to={backTo}>← Back to Store</Link>

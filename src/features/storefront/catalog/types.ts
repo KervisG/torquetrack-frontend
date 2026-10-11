@@ -1,3 +1,7 @@
+// Foto de la galería del producto. La primera es la portada, que el backend
+// repite en `image`.
+export type ProductImage = { id: number; url: string; alt: string }
+
 export type Product = {
   id: string
   // URL legible para la ficha; el backend acepta slug o id en el detalle.
@@ -31,6 +35,8 @@ export type Product = {
   compareAt?: number
   coreCharge?: number
   image?: string
+  // Solo viene cuando el producto tiene fotos subidas desde el panel.
+  images?: ProductImage[]
   shippingWeight?: number
   packageLength?: number
   packageWidth?: number

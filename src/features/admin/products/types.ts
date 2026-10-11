@@ -1,6 +1,14 @@
-import type { Product } from '@/features/storefront/catalog/types'
+import type { Product, ProductImage } from '@/features/storefront/catalog/types'
 
-export type AdminProduct = Product & {
+// La galería como la devuelve el panel: con el orden y el tamaño de cada foto.
+export type AdminProductImage = ProductImage & {
+  position: number
+  width: number | null
+  height: number | null
+}
+
+export type AdminProduct = Omit<Product, 'images'> & {
+  images?: AdminProductImage[]
   active: boolean
   condition?: string
   description?: string
