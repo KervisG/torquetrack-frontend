@@ -38,15 +38,14 @@ function num(value: unknown, fallback = 0): number {
   return value !== null && value !== undefined && Number.isFinite(parsed) ? parsed : fallback
 }
 
-// Las líneas del storefront y del panel usan `quantity`/`unitPrice`; las
-// viejas pueden traer `qty`/`price`. Solo se renombran campos.
+// El backend devuelve la misma forma de línea en pedidos y cotizaciones.
 function toLineItem(item: RawRecord): LineItem {
   return {
-    productId: text(item.productId ?? item.id) || undefined,
+    productId: text(item.productId) || undefined,
     title: text(item.title),
     partNumber: text(item.partNumber),
-    quantity: num(item.quantity ?? item.qty, 1),
-    unitPrice: num(item.unitPrice ?? item.price),
+    quantity: num(item.quantity, 1),
+    unitPrice: num(item.unitPrice),
     coreCharge: num(item.coreCharge),
   }
 }

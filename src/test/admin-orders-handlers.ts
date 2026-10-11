@@ -44,11 +44,11 @@ export function orderRow(overrides: Partial<OrderApiRow>): OrderApiRow {
     },
     items: [
       {
-        id: 'gm-65-injection-pump',
+        productId: 'gm-65-injection-pump',
         title: 'Injection Pump',
         partNumber: '502-550',
-        qty: 2,
-        price: 189.99,
+        quantity: 2,
+        unitPrice: 189.99,
         coreCharge: 25,
       },
     ],

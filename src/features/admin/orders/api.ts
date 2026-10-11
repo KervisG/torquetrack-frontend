@@ -63,15 +63,14 @@ function num(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-// El checkout guarda `qty`/`price`; un pedido convertido desde una
-// cotización trae `quantity`/`unitPrice`. Solo se renombran campos.
+// El backend devuelve la misma forma de línea en pedidos y cotizaciones.
 function toLineItem(item: RawRecord): LineItem {
   return {
-    productId: text(item.id ?? item.productId) || undefined,
+    productId: text(item.productId) || undefined,
     title: text(item.title),
     partNumber: text(item.partNumber),
-    quantity: num(item.qty ?? item.quantity ?? 1),
-    unitPrice: num(item.price ?? item.unitPrice),
+    quantity: num(item.quantity ?? 1),
+    unitPrice: num(item.unitPrice),
     coreCharge: num(item.coreCharge),
   }
 }

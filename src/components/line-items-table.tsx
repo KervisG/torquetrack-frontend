@@ -1,7 +1,7 @@
 import { formatMoney } from '@/lib/money'
 
-// Línea ya normalizada por el `api.ts` de cada feature (`qty`/`quantity`,
-// `price`/`unitPrice`). `lineTotal` solo existe cuando lo calculó el backend.
+// Línea de pedido o cotización, con la forma única del backend. `lineTotal`
+// solo existe cuando lo calculó el backend.
 export type LineItem = {
   productId?: string
   title: string
