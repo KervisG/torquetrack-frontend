@@ -1,5 +1,6 @@
 # Imagen de producción: nginx sirve el SPA ya compilado y hace de proxy
-# inverso hacia Django. Topología: proxy de Render -> este contenedor -> backend.
+# inverso hacia Django. Topología: proxy que termina TLS (Caddy en el Droplet)
+# -> este contenedor -> backend.
 
 # --- Build del SPA ---------------------------------------------------------
 FROM node:24-alpine AS build
@@ -28,14 +29,11 @@ RUN rm /etc/nginx/conf.d/default.conf
 
 COPY nginx/snippets/ /etc/nginx/snippets/
 COPY nginx/templates/ /etc/nginx/templates/
-# El entrypoint de la imagen ignora los scripts sin permiso de ejecución.
-COPY nginx/entrypoint/ /docker-entrypoint.d/
-RUN chmod 755 /docker-entrypoint.d/18-backend-upstream.envsh
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # BACKEND_UPSTREAM: host:puerto de gunicorn. Se resuelve en cada request, así
 # que no hace falta que exista al arrancar nginx.
-# PORT: el de Render reemplaza este default, que sirve para docker run local.
+# PORT: el hosting puede reemplazar este default, que sirve para docker run local.
 # NGINX_ENTRYPOINT_LOCAL_RESOLVERS: activa 15-local-resolvers.envsh, que exporta
 # NGINX_LOCAL_RESOLVERS con los nameserver de /etc/resolv.conf.
 # El filtro limita envsubst a esas tres variables.
@@ -44,7 +42,7 @@ ENV BACKEND_UPSTREAM=backend:8000 \
     NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
     NGINX_ENVSUBST_FILTER="^(BACKEND_UPSTREAM|PORT|NGINX_LOCAL_RESOLVERS)$"
 
-# Sin TLS: el proxy de Render termina HTTPS. EXPOSE es solo informativo; el
+# Sin TLS: el proxy de delante (Caddy) termina HTTPS. EXPOSE es solo informativo; el
 # puerto real es PORT.
 EXPOSE 80
 

@@ -13,9 +13,9 @@ export class ApiError extends Error {
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'TRACE'])
 
-// Render en el plan gratuito tarda más de 10 s en despertar. Cortar a los 10 s
-// aborta la petición que lo está encendiendo y el panel muestra
-// "Something went wrong" al cargar o guardar.
+// Igual al timeout de gunicorn (60 s, el PDF de la cotización se genera dentro
+// del request). Cortar antes aborta una petición que el backend todavía puede
+// completar y el panel muestra "Something went wrong" al cargar o guardar.
 const REQUEST_TIMEOUT_MS = 60_000
 
 function withTrailingSlash(path: string): string {

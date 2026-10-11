@@ -6,11 +6,15 @@
 
 server_tokens off;
 
-# El proxy de Render termina TLS y manda la IP del cliente en X-Forwarded-For.
-# No se usa realip: Render no publica los rangos de sus proxies, y sin ellos
-# no hay forma segura de decidir a qué entrada del header creerle. Por eso
-# $remote_addr es la IP del proxy, y la del cliente la resuelve Django con
-# NUM_PROXIES sobre X-Forwarded-For.
+# El proxy que termina TLS (Caddy en el Droplet) manda la IP del cliente en
+# X-Forwarded-For. realip hace que $remote_addr sea esa IP, así los topes de
+# abajo cuentan por cliente y no por proxy. Solo se le cree a la red privada
+# de Docker (172.16.0.0/12), donde vive Caddy: el firewall deja abiertos solo
+# los puertos de Caddy, y Caddy reemplaza el X-Forwarded-For que mande el
+# cliente. Django sigue resolviendo la IP por su cuenta con NUM_PROXIES.
+set_real_ip_from 172.16.0.0/12;
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
 
 # El proxy que termina TLS manda el esquema original; sin el header (pruebas
 # en local) se usa el de la conexión.
@@ -20,8 +24,8 @@ map $http_x_forwarded_proto $forwarded_proto {
 }
 
 # Primera capa de tope por IP de la conexión; los throttles de DRF siguen
-# siendo la segunda capa, por ruta y por IP del cliente. Sin realip, la IP de
-# la conexión es la del proxy de Render: varios clientes pueden compartir tope.
+# siendo la segunda capa, por ruta y por IP del cliente. Con realip, la IP es
+# la del cliente y no la del proxy que termina TLS.
 limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
 
 # Login del admin de Django: Django no limita sus intentos, así que sin esto
@@ -38,19 +42,18 @@ limit_req_status 429;
 # 15-local-resolvers.envsh de la imagen (NGINX_ENTRYPOINT_LOCAL_RESOLVERS en el
 # Dockerfile). `valid` acota cuánto vive una IP en caché: tras un deploy o un
 # reinicio del backend, el proxy toma la nueva en segundos. Sin IPv6 porque la
-# red privada de Render es IPv4.
+# red de Docker entre los contenedores es IPv4 (el default de Docker).
 resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
 resolver_timeout 5s;
 
 server {
-    # Render asigna el puerto en PORT (10000 por defecto); el Dockerfile deja
-    # 80 para docker run en local.
+    # El puerto sale de PORT para que el hosting pueda elegirlo; el Dockerfile
+    # deja 80 por defecto.
     listen ${PORT} default_server;
     listen [::]:${PORT} default_server;
     server_name _;
 
-    # host:puerto de gunicorn; proxy-backend.conf lo usa en `proxy_pass`. Ya
-    # trae el dominio de búsqueda que agrega 18-backend-upstream.envsh.
+    # host:puerto de gunicorn; proxy-backend.conf lo usa en `proxy_pass`.
     set $django_upstream ${BACKEND_UPSTREAM};
 
     root /usr/share/nginx/html;
