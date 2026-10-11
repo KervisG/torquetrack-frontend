@@ -5,5 +5,6 @@ export const catalogKeys = {
   products: () => [...catalogKeys.all, 'products'] as const,
   search: (search: ProductSearch) => [...catalogKeys.products(), 'search', search] as const,
   byIds: (ids: string[]) => [...catalogKeys.products(), 'ids', ids] as const,
+  overview: () => [...catalogKeys.products(), 'overview'] as const,
   product: (id: string) => [...catalogKeys.all, 'product', id] as const,
 }

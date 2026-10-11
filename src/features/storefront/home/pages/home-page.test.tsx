@@ -13,12 +13,21 @@ function header() {
 }
 
 describe('Storefront home', () => {
-  it('renders the shop catalog on /', async () => {
+  it('introduces the store on / and links to the catalog', async () => {
     server.use(productsOk())
     renderApp('/')
 
     expect(await screen.findByRole('heading', { name: /find it/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /cart/i })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Chevrolet \/ GMC/ })).toHaveAttribute(
+      'href',
+      '/shop?q=Chevrolet+%2F+GMC',
+    )
+    expect(screen.getByRole('link', { name: /Shop High-pressure fuel pump/ })).toHaveAttribute(
+      'href',
+      '/shop?category=HPFP',
+    )
+    expect(screen.getByRole('heading', { name: 'About TorqueTrack Diesel' })).toBeInTheDocument()
   })
 
   it('offers a single sign in when logged out', async () => {

@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 
 import {
   canonicalCategory,
+  categoryLabel,
   productFitsVehicle,
 } from '@/features/storefront/catalog/filter-products'
 import type { FitVehicle, Product } from '@/features/storefront/catalog/types'
@@ -97,6 +98,30 @@ function vehicleFrom(params: URLSearchParams): FitVehicle | null {
     : null
 }
 
+// La portada: cuántos productos hay por categoría y por marca de vehículo.
+function catalogOverview(products: Product[]) {
+  const tally = (values: string[]) =>
+    [...new Set(values)].map((name) => ({
+      name,
+      count: values.filter((value) => value === name).length,
+    }))
+  const categories = products.map((product) => canonicalCategory(product.category))
+  return {
+    productCount: products.length,
+    categories: tally(categories).map(({ name, count }) => ({
+      value: name,
+      label: categoryLabel(name),
+      count,
+      brands: distinct(
+        products
+          .filter((product) => canonicalCategory(product.category) === name)
+          .flatMap(manufacturerNames),
+      ),
+    })),
+    makes: tally(products.map((product) => String(product.make || '')).filter(Boolean)),
+  }
+}
+
 // Lo mismo que `search_products` del backend, para un catálogo de prueba: una
 // página con sus totales y, salvo con `ids`, las opciones de los filtros.
 export function searchCatalog(products: Product[], params: URLSearchParams) {
@@ -139,6 +164,7 @@ export function searchCatalog(products: Product[], params: URLSearchParams) {
   if (ids.length) return body
   return {
     ...body,
+    ...(params.get('overview') ? { overview: catalogOverview(products) } : {}),
     facets: {
       brands: distinct(products.flatMap(manufacturerNames)),
       categories: distinct(products.map((product) => product.category)),

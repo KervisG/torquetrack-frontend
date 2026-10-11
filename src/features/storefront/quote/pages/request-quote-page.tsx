@@ -105,7 +105,7 @@ export function RequestQuotePage() {
               </p>
             ) : null}
             <StorefrontButton asChild tone="outline">
-              <Link to="/">Keep shopping</Link>
+              <Link to="/shop">Keep shopping</Link>
             </StorefrontButton>
           </CardContent>
         </Card>
@@ -196,7 +196,7 @@ export function RequestQuotePage() {
               <div className="space-y-3">
                 <p className="text-destructive">Your cart is empty.</p>
                 <StorefrontButton asChild tone="outline">
-                  <Link to="/">Find parts</Link>
+                  <Link to="/shop">Find parts</Link>
                 </StorefrontButton>
               </div>
             )}

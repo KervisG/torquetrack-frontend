@@ -66,8 +66,11 @@ export function StorefrontShell() {
               </span>
             </span>
           </Link>
-          {/* El logo ya lleva al catálogo y al checkout se llega desde el carrito. */}
+          {/* El logo lleva a la portada y al checkout se llega desde el carrito. */}
           <nav className="flex items-center gap-1 sm:gap-2" aria-label="Store">
+            <Link to="/shop" className={navLink}>
+              Shop
+            </Link>
             <a href={STORE_PHONE.href} className={`${navLink} inline-flex items-center`} aria-label={`Call ${STORE_PHONE.display}`}>
               <Phone className="inline size-4 sm:mr-1.5" />
               <span className="max-sm:hidden">{STORE_PHONE.display}</span>
@@ -209,7 +212,7 @@ export function StorefrontShell() {
               <div className="flex h-full flex-col items-start justify-center gap-3">
                 <p className="text-muted-foreground">Your cart is empty.</p>
                 <StorefrontButton asChild tone="outline" onClick={() => setDrawerOpen(false)}>
-                  <Link to="/">Continue shopping</Link>
+                  <Link to="/shop">Continue shopping</Link>
                 </StorefrontButton>
               </div>
             )}

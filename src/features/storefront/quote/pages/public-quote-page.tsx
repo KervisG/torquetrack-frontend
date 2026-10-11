@@ -64,7 +64,7 @@ function QuoteUnavailable({ error }: { error: unknown }) {
       <CardContent className="space-y-4 text-sm text-muted-foreground">
         <p>{message}</p>
         <StorefrontButton asChild tone="outline">
-          <Link to="/">Go to the store</Link>
+          <Link to="/shop">Go to the store</Link>
         </StorefrontButton>
       </CardContent>
     </Card>

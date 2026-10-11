@@ -24,11 +24,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { trackSearch } from '@/lib/analytics'
 import { ApiError } from '@/lib/api-client'
 import { formatMoney, hasListedPrice } from '@/lib/money'
-import { SITE_NAME, usePageMeta } from '@/lib/page-meta'
+import { usePageMeta } from '@/lib/page-meta'
 import { describeVehicle, useVehicleStore } from '@/stores/vehicle-store'
 
 import { searchProducts, type ProductSearch } from '../api'
-import { HomeHero } from '../components/home-hero'
 import { CategoryPicker } from '../components/category-picker'
 import { PriceRange } from '../components/price-range'
 import { ProductPhoto } from '../components/product-photo'
@@ -97,13 +96,12 @@ export function CatalogPage() {
     placeholderData: keepPreviousData,
   })
 
-  // Los filtros cambian la lista, no la página: el canonical sigue siendo `/`.
+  // Los filtros cambian la lista, no la página: el canonical sigue siendo `/shop`.
   usePageMeta({
-    title: `${SITE_NAME} – Diesel Injectors, Pumps & Parts`,
-    fullTitle: true,
+    title: 'Shop Diesel Parts',
     description:
       'Shop diesel fuel injectors, injection pumps and engine parts by part number or vehicle. Fitment checked by VIN at checkout. Ships across the US.',
-    canonicalPath: '/',
+    canonicalPath: '/shop',
     type: 'website',
   })
 
@@ -281,8 +279,10 @@ export function CatalogPage() {
 
   return (
     <main>
-      <HomeHero />
-      <div className="flex flex-col gap-6 py-6 pl-4 pr-4 lg:flex-row lg:items-start lg:py-8 lg:pl-6 lg:pr-8">
+      <h1 className="px-4 pt-6 text-2xl font-semibold tracking-tight lg:px-6 lg:pt-8">
+        Shop diesel parts
+      </h1>
+      <div className="flex flex-col gap-6 py-6 pl-4 pr-4 lg:flex-row lg:items-start lg:pl-6 lg:pr-8">
         {isDesktop ? (
           <aside className="w-72 shrink-0 space-y-6 lg:sticky lg:top-20">{filters}</aside>
         ) : null}

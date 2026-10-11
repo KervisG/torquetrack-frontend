@@ -644,7 +644,7 @@ export function CheckoutPage() {
               ) : (
                 <div>
                   <p className="text-sm text-muted-foreground">Your cart is empty.</p>
-                  <Link to="/" className="mt-2 inline-block text-sm font-medium text-sky-900 hover:underline">
+                  <Link to="/shop" className="mt-2 inline-block text-sm font-medium text-sky-900 hover:underline">
                     Continue shopping
                   </Link>
                 </div>

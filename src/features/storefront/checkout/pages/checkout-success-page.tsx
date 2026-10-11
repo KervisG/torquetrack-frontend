@@ -37,7 +37,7 @@ export function CheckoutSuccessPage() {
           </p>
           {orderId ? <p className="mt-4 font-medium">Order reference: {orderId}</p> : null}
           <StorefrontButton asChild className="mt-6">
-            <Link to="/">Back to Store</Link>
+            <Link to="/shop">Back to Store</Link>
           </StorefrontButton>
         </CardContent>
       </Card>

@@ -19,7 +19,7 @@ export function NotFoundPage() {
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <StorefrontButton asChild>
-              <Link to="/">Back to Store</Link>
+              <Link to="/shop">Back to Store</Link>
             </StorefrontButton>
             <StorefrontButton asChild tone="outline">
               <Link to="/quote">Request a Quote</Link>

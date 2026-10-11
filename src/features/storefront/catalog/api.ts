@@ -71,6 +71,19 @@ export async function listProductsByIds(ids: string[]): Promise<Product[]> {
   return page.results
 }
 
+// Qué vende la tienda, para la portada: productos por categoría y por marca
+// de vehículo, y los fabricantes de cada categoría. Sale de los datos reales.
+export type CatalogOverview = {
+  productCount: number
+  categories: Array<{ value: string; label: string; count: number; brands: string[] }>
+  makes: Array<{ name: string; count: number }>
+}
+
+export async function getCatalogOverview(): Promise<CatalogOverview> {
+  const page = await apiRequest<{ overview: CatalogOverview }>('/products?overview=1&pageSize=1')
+  return page.overview
+}
+
 // El backend busca primero por id y después por slug. Un 404 es "no existe",
 // no un error de la página.
 export async function getProduct(idOrSlug: string): Promise<Product | null> {

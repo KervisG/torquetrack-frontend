@@ -18,6 +18,8 @@ type VinFormProps = {
   layout?: 'stacked' | 'inline'
   labelClassName?: string
   errorClassName?: string
+  // La portada lleva al catálogo en cuanto el vehículo queda guardado.
+  onDecoded?: () => void
 }
 
 // Única búsqueda por VIN de la tienda: la usan el hero del catálogo y el
@@ -30,6 +32,7 @@ export function VinForm({
   layout = 'stacked',
   labelClassName,
   errorClassName,
+  onDecoded,
 }: VinFormProps) {
   const setVehicle = useVehicleStore((state) => state.setVehicle)
   const [vin, setVin] = useState(initialVin)
@@ -43,6 +46,7 @@ export function VinForm({
     try {
       const result = await decodeVin(typed)
       setVehicle({ ...result.vehicle, vin: typed, source: 'vin' })
+      onDecoded?.()
     } catch (decodeError) {
       setError(decodeError instanceof ApiError ? decodeError.message : 'VIN lookup failed')
     } finally {

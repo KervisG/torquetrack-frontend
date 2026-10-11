@@ -16,6 +16,7 @@ import { CatalogPage } from '@/features/storefront/catalog/pages/catalog-page'
 import { CheckoutPage } from '@/features/storefront/checkout/pages/checkout-page'
 import { CheckoutSuccessPage } from '@/features/storefront/checkout/pages/checkout-success-page'
 import { NotFoundPage } from '@/features/storefront/errors/pages/not-found-page'
+import { HomePage } from '@/features/storefront/home/pages/home-page'
 import { RouteErrorPage } from '@/features/storefront/errors/pages/route-error-page'
 import { PoliciesPage } from '@/features/storefront/policies/pages/policies-page'
 import { PrivacyPolicyPage } from '@/features/storefront/policies/pages/privacy-policy-page'
@@ -46,7 +47,8 @@ export const appRoutes = [
       {
         element: <StorefrontShell />,
         children: [
-          { path: '/', element: <CatalogPage /> },
+          { path: '/', element: <HomePage /> },
+          { path: '/shop', element: <CatalogPage /> },
           // Acepta el slug (el que enlaza la tienda) o el id de los enlaces viejos.
           { path: '/product/:idOrSlug', element: <ProductPage /> },
           { path: '/checkout', element: <CheckoutPage /> },

@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { VinForm } from '@/features/storefront/vin/components/vin-form'
 import { describeVehicle, useVehicleStore } from '@/stores/vehicle-store'
+
+import { SHOP_PATH } from '../product-path'
 
 // Clip de Pexels (video 7568439, licencia libre): manos armando piezas de
 // motor en un banco de taller. Reescalado a 1080p y sin audio.
@@ -10,6 +13,7 @@ const HERO_POSTER = '/videos/home-engine-poster.jpg'
 
 export function HomeHero() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const navigate = useNavigate()
   const vehicle = useVehicleStore((state) => state.vehicle)
 
   useEffect(() => {
@@ -26,8 +30,8 @@ export function HomeHero() {
   return (
     // El header mide h-16 y es sticky. El margen negativo mete el video
     // debajo de esa barra para que la toma llegue al borde de la ventana.
-    // En el teléfono el hero se ajusta a su contenido para que los productos
-    // aparezcan pronto; desde md recupera la toma alta.
+    // En el teléfono el hero se ajusta a su contenido para que el resto de la
+    // portada aparezca pronto; desde md recupera la toma alta.
     <section className="relative isolate -mt-16 overflow-hidden bg-neutral-950 text-white md:min-h-[calc(70vh+4rem)]">
       <video
         ref={videoRef}
@@ -52,8 +56,8 @@ export function HomeHero() {
         <p className="mt-2 max-w-lg text-base text-white/85 md:mt-4 md:text-lg">
           Diesel parts for the trucks that work.
         </p>
-        {/* La búsqueda por VIN es la acción principal: guarda el vehículo y el
-            catálogo de abajo pasa a mostrar solo lo que le va. */}
+        {/* La búsqueda por VIN es la acción principal: guarda el vehículo y
+            abre el catálogo, que muestra solo lo que le va. */}
         <div className="mt-4 max-w-lg md:mt-6">
           <VinForm
             id="hero-vin"
@@ -63,12 +67,19 @@ export function HomeHero() {
             initialVin={vehicle?.vin ?? ''}
             labelClassName="text-white"
             errorClassName="font-medium text-red-300"
+            onDecoded={() => navigate(SHOP_PATH)}
           />
           {vehicle ? (
             <p role="status" className="mt-2 text-sm text-white/85">
               Saved vehicle: {describeVehicle(vehicle)}
             </p>
           ) : null}
+          <Link
+            to={SHOP_PATH}
+            className="mt-3 inline-block text-sm font-medium text-amber-400 underline-offset-4 hover:underline"
+          >
+            Or browse all parts →
+          </Link>
         </div>
       </div>
     </section>

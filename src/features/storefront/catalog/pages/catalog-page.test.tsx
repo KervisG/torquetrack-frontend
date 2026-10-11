@@ -24,7 +24,7 @@ describe('CatalogPage', () => {
       ]),
     )
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/shop')
 
     expect(await screen.findByText(sampleProduct.title)).toBeInTheDocument()
     expect(screen.getByText('Ford Power Stroke Turbo')).toBeInTheDocument()
@@ -50,7 +50,7 @@ describe('CatalogPage', () => {
       ]),
     )
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/shop')
 
     expect(await screen.findByText(sampleProduct.title)).toBeInTheDocument()
     const category = screen.getByRole('combobox', { name: 'Category' })
@@ -72,7 +72,7 @@ describe('CatalogPage', () => {
       ]),
     )
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/shop')
 
     expect(await screen.findByText('New Pump')).toBeInTheDocument()
     expect(screen.getByText('Used Turbo')).toBeInTheDocument()
@@ -93,7 +93,7 @@ describe('CatalogPage', () => {
       ]),
     )
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/shop')
 
     expect(await screen.findByText('Cheap Seal')).toBeInTheDocument()
     screen.getByRole('slider', { name: 'Minimum price' }).focus()
@@ -119,7 +119,7 @@ describe('CatalogPage', () => {
         },
       ]),
     )
-    renderApp('/')
+    renderApp('/shop')
 
     expect(await screen.findByText('Price on request')).toBeInTheDocument()
     expect(screen.getByText('Part # 502-550')).toBeInTheDocument()
@@ -135,7 +135,7 @@ describe('CatalogPage', () => {
     }))
     server.use(productsApi(many))
     const user = userEvent.setup()
-    renderApp('/')
+    renderApp('/shop')
 
     expect(await screen.findByText('Part 0')).toBeInTheDocument()
     expect(screen.getByText('1–16 of 17 results')).toBeInTheDocument()
@@ -154,7 +154,7 @@ describe('CatalogPage', () => {
         HttpResponse.json({ error: 'Catalog unavailable' }, { status: 502 }),
       ),
     )
-    renderApp('/')
+    renderApp('/shop')
 
     expect(await screen.findByText('Catalog unavailable')).toBeInTheDocument()
   })
