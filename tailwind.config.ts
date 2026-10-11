@@ -2,9 +2,8 @@ import type { Config } from 'tailwindcss'
 
 // Theme tokens map to the CSS variables defined in src/index.css so
 // shadcn/ui primitives (frontend/src/components/ui/) resolve colors
-// consistently in light mode. Dark mode / palette tuning is Phase 8+ work.
+// consistently in light mode.
 const config: Config = {
-  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {

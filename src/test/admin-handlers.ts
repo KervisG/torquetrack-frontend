@@ -24,9 +24,9 @@ export const customerUser: SessionUser = {
   emailVerified: true,
 }
 
-export const testCsrfToken = 'csrf-test-token'
+const testCsrfToken = 'csrf-test-token'
 
-export const dashboardCounts = {
+const dashboardCounts = {
   orders: 3,
   activeQuotes: 1,
   buildingQuotes: 0,
@@ -54,7 +54,7 @@ export function dashboardOk() {
 }
 
 // Sin "3" ni "$12.50" sueltos: los tests de los conteos buscan esos textos exactos.
-export const dashboardAnalytics = {
+const dashboardAnalytics = {
   range: '30d',
   granularity: 'day',
   timeZone: 'UTC',

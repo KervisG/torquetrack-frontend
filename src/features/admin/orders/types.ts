@@ -13,7 +13,7 @@ export const ORDER_STATUSES = [
   'REJECTED',
 ] as const
 
-export type OrderStatus = (typeof ORDER_STATUSES)[number]
+type OrderStatus = (typeof ORDER_STATUSES)[number]
 
 // El cobro pasa `PENDING_PAYMENT` a `OPEN` solo. Un reembolso no cierra el
 // pedido, y el envío no lo marca `COMPLETED`.

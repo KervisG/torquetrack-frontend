@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 
-export const ADMIN_PAGE_SIZE = 25
+const ADMIN_PAGE_SIZE = 25
 
 type PageView<T> = {
   items: T[]

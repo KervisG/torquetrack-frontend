@@ -5,8 +5,6 @@ import type { DocumentTotals } from '@/features/account/portal/types'
 // CONVERTED el convert; se cambian con sus acciones, no a mano.
 export const EDITABLE_QUOTE_STATUSES = ['BUILDING', 'ACTIVE', 'CONTACTED', 'LOST'] as const
 
-export const QUOTE_STATUSES = [...EDITABLE_QUOTE_STATUSES, 'EXPIRED', 'CONVERTED'] as const
-
 export type QuoteCustomer = {
   name: string
   company: string

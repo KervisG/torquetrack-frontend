@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 
 // Forma de `GET /api/admin/customers/`: columnas de la fila más el `data`
 // expandido, con el tax ID enmascarado.
-export type CustomerApiRow = {
+type CustomerApiRow = {
   id: string
   email: string | null
   name?: string
@@ -38,7 +38,7 @@ export function customerRow(overrides: Partial<CustomerApiRow>): CustomerApiRow 
   }
 }
 
-export const sampleTaxExemption = {
+const sampleTaxExemption = {
   id: 'C_PAT',
   email: 'pat@example.com',
   status: 'PENDING VERIFICATION',

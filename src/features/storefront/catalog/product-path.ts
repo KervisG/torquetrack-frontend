@@ -7,7 +7,7 @@ export function productPath(product: Pick<Product, 'id' | 'slug'>): string {
 
 // La ficha vuelve al listado con los mismos filtros: el catálogo los guarda en
 // la query string y se la pasa al enlace como `state` del historial.
-export type CatalogReturnState = { catalogSearch: string }
+type CatalogReturnState = { catalogSearch: string }
 
 export function catalogReturnState(search: string): CatalogReturnState {
   return { catalogSearch: search }

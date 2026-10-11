@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 
 // Forma de `GET /api/admin/orders/`: el `data` del pedido expandido más las
 // columnas y los pagos (sin el id de Stripe).
-export type OrderApiRow = {
+type OrderApiRow = {
   id: string
   number: string
   status: string

@@ -36,7 +36,7 @@ const UNTRACKED_PREFIXES = ['/admin', '/account']
 
 let initialized = false
 
-export function isTrackedPath(pathname: string): boolean {
+function isTrackedPath(pathname: string): boolean {
   return !UNTRACKED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
 }
 

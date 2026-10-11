@@ -95,7 +95,7 @@ function toCamelCase(value: string): string {
   return value.replace(/_([a-z0-9])/g, (_, char: string) => char.toUpperCase())
 }
 
-export type FriendlyApiError = { message: string; field?: string }
+type FriendlyApiError = { message: string; field?: string }
 
 export function friendlyApiError(error: unknown): FriendlyApiError {
   if (!(error instanceof ApiError)) {

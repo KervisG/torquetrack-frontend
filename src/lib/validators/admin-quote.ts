@@ -21,7 +21,7 @@ export const quoteLineSchema = z.object({
 // El backend exige estado y ZIP para calcular el impuesto (salvo un cliente
 // exento), pero aquí no se exigen: el editor no sabe si el cliente está
 // exento y el 400 del servidor ya trae el motivo.
-export const quoteShippingAddressSchema = z.object({
+const quoteShippingAddressSchema = z.object({
   address1: z.string().trim(),
   city: z.string().trim(),
   state: z.string().trim().toUpperCase(),

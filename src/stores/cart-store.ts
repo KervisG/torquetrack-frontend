@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware'
 import { apiRequest } from '@/lib/api-client'
 import type { ShippingRate } from '@/features/storefront/catalog/types'
 
-export type CartLine = { id: string; qty: number }
+type CartLine = { id: string; qty: number }
 
 // El backend es la fuente de verdad: devuelve cada línea repreciada. El store
 // solo guarda `id` y `qty`; el precio de venta sale del catálogo. `previousPrice`
@@ -188,7 +188,7 @@ export async function pushCart(): Promise<void> {
 
 // Lee el carrito del backend y lo aplica si no hay cambios locales sin
 // confirmar.
-export async function hydrateCart(): Promise<void> {
+async function hydrateCart(): Promise<void> {
   const started = revision
   if (started !== syncedRevision) return
   try {

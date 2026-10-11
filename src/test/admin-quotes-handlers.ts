@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 
 // Forma de `GET /api/admin/quotes/`: `serialize_quote` del backend.
-export type QuoteApiRow = {
+type QuoteApiRow = {
   id: string
   number: string
   status: string
