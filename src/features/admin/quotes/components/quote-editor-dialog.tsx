@@ -1,11 +1,9 @@
 import { useRef, useState } from 'react'
 
-import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -14,8 +12,6 @@ import type { AdminQuoteValues } from '@/lib/validators/admin-quote'
 
 import { useSaveQuote } from '../hooks/use-save-quote'
 import { QuoteForm } from './quote-form'
-
-const FORM_ID = 'quote-editor-form'
 
 const newQuote: AdminQuoteValues = {
   status: 'ACTIVE',
@@ -66,38 +62,26 @@ export function QuoteEditorDialog({ open, onOpenChange }: QuoteEditorDialogProps
         <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 pr-12">
           <DialogTitle>New quote</DialogTitle>
           <DialogDescription>
-            Customer, vehicle, and line items. Totals are calculated when you save.
+            One step at a time: customer, vehicle, items and shipping. Totals are calculated when
+            you save.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           {open ? (
             <QuoteForm
               key="new-quote"
-              formId={FORM_ID}
-              hideSubmit
               defaultValues={newQuote}
               canSearchCatalog={can('products.view')}
               canOverrideTax={can('tax_exemptions.review')}
               submitting={save.isPending}
               error={save.error}
               onDirtyChange={setDirty}
+              // "Cancel" va en la barra de pasos, junto a "Back" y "Next".
+              onCancel={() => handleOpenChange(false)}
               onSubmit={(values) => save.mutate(values)}
             />
           ) : null}
         </div>
-        <DialogFooter className="shrink-0 border-t bg-background px-6 py-4">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={save.isPending}
-            onClick={() => handleOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" form={FORM_ID} disabled={save.isPending}>
-            {save.isPending ? 'Saving…' : 'Save quote'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

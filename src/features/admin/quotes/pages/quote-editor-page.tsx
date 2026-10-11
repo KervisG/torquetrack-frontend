@@ -97,6 +97,7 @@ export function QuoteEditorPage() {
         defaultValues={existing ? valuesFor(existing, canOverrideTax) : newQuote}
         quoteId={existing?.id}
         customerId={existing?.customerId ?? undefined}
+        editing={Boolean(existing)}
         canOverrideTax={canOverrideTax}
         savedTax={
           existing

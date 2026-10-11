@@ -17,6 +17,10 @@ function staffWith(permissions: string[]) {
   })
 }
 
+// El editor va por pasos: Customer, Vehicle, Items, Shipping & tax y Review.
+// Al crear se avanza con "Next" y se guarda en el último; al editar se salta a
+// cualquier paso y se guarda desde donde sea.
+//
 // `findByRole` sobre toda la app (barra lateral + contenido) tarda cientos de ms
 // por intento y con la suite en paralelo agota el timeout; se espera con queries
 // baratas (texto o etiqueta acotados por selector) y los roles se consultan después.
@@ -42,7 +46,9 @@ describe('QuoteEditorPage', () => {
     const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     await user.type(form.getByLabelText('Customer name'), 'Nia New')
     await user.type(form.getByLabelText('Customer email'), 'nia@example.com')
+    await user.click(form.getByRole('button', { name: 'Next' }))
     await user.type(form.getByLabelText('VIN'), '1FTSW21P')
+    await user.click(form.getByRole('button', { name: 'Next' }))
     await user.click(form.getByRole('button', { name: 'Add item' }))
     const line = within(form.getByRole('group', { name: 'Item 1' }))
     await user.type(line.getByLabelText('Description'), 'EGR Cooler')
@@ -51,8 +57,12 @@ describe('QuoteEditorPage', () => {
     await user.type(line.getByLabelText('Unit price'), '350')
     await user.clear(line.getByLabelText('Qty'))
     await user.type(line.getByLabelText('Qty'), '2')
+    await user.click(form.getByRole('button', { name: 'Next' }))
     await user.clear(form.getByLabelText('Shipping'))
     await user.type(form.getByLabelText('Shipping'), '40')
+    await user.click(form.getByRole('button', { name: 'Next' }))
+    // El último paso muestra lo cargado antes de guardar.
+    expect(within(form.getByRole('region', { name: 'Review' })).getByText(/EGR Cooler/)).toBeInTheDocument()
     await user.click(form.getByRole('button', { name: 'Save quote' }))
 
     // Tras guardar se abre el detalle con los totales que calculó el backend.
@@ -88,11 +98,15 @@ describe('QuoteEditorPage', () => {
     const user = userEvent.setup()
     const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     await user.type(form.getByLabelText('Customer name'), 'Walk In')
+    await user.click(form.getByRole('button', { name: 'Next' }))
+    await user.click(form.getByRole('button', { name: 'Next' }))
     await user.click(form.getByRole('button', { name: 'Add item' }))
     await user.type(
       within(form.getByRole('group', { name: 'Item 1' })).getByLabelText('Description'),
       'Glow plug',
     )
+    await user.click(form.getByRole('button', { name: 'Next' }))
+    await user.click(form.getByRole('button', { name: 'Next' }))
     await user.click(form.getByRole('button', { name: 'Save quote' }))
 
     expect(await screen.findByText('Quote Q10099', { selector: 'h1, h2, h3' })).toBeInTheDocument()
@@ -109,10 +123,18 @@ describe('QuoteEditorPage', () => {
 
     const user = userEvent.setup()
     const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
-    await user.click(form.getByRole('button', { name: 'Save quote' }))
-
+    // Cada paso valida lo suyo y no deja avanzar hasta corregirlo.
+    await user.click(form.getByRole('button', { name: 'Next' }))
     expect(await form.findByText('Customer name is required')).toBeInTheDocument()
-    expect(form.getByText('Add at least one item')).toBeInTheDocument()
+    expect(form.queryByRole('button', { name: 'Save quote' })).not.toBeInTheDocument()
+
+    await user.type(form.getByLabelText('Customer name'), 'Nia New')
+    await user.click(form.getByRole('button', { name: 'Next' }))
+    await user.click(form.getByRole('button', { name: 'Next' }))
+    await user.click(form.getByRole('button', { name: 'Next' }))
+
+    expect(await form.findByText('Add at least one item')).toBeInTheDocument()
+    expect(form.getByRole('button', { name: 'Add item' })).toBeInTheDocument()
     expect(quotes.calls.filter((call) => call.method === 'POST')).toEqual([])
   })
 
@@ -125,8 +147,10 @@ describe('QuoteEditorPage', () => {
     const user = userEvent.setup()
     const form = within(await screen.findByLabelText('Quote', { selector: 'form' }))
     expect(form.getByLabelText('Customer name')).toHaveValue('Pat Fleet')
+    await user.click(form.getByRole('button', { name: /Items/ }))
     const line = within(form.getByRole('group', { name: 'Item 1' }))
     expect(line.getByLabelText('Description')).toHaveValue('HX35 Turbocharger')
+    await user.click(form.getByRole('button', { name: /Shipping & tax/ }))
     await user.selectOptions(form.getByLabelText('Status'), 'CONTACTED')
     await user.clear(form.getByLabelText('Memo'))
     await user.type(form.getByLabelText('Memo'), 'Customer approved')
