@@ -14,9 +14,8 @@ import { Separator } from '@/components/ui/separator'
 import { useSession } from '@/features/account/auth/hooks/use-session'
 import { getAccount } from '@/features/account/portal/api'
 import { accountKeys } from '@/features/account/portal/query-keys'
-import { listProducts } from '@/features/storefront/catalog/api'
+import { useCartProducts } from '@/features/storefront/catalog/hooks/use-cart-products'
 import { productPath } from '@/features/storefront/catalog/product-path'
-import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { decodeVin } from '@/features/storefront/vin/api'
 import { trackBeginCheckout } from '@/lib/analytics'
 import { ApiError } from '@/lib/api-client'
@@ -163,7 +162,7 @@ export function CheckoutPage() {
   const setQty = useCartStore((state) => state.setQty)
   const remove = useCartStore((state) => state.remove)
   const savedVehicle = useVehicleStore((state) => state.vehicle)
-  const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
+  const products = useCartProducts()
   const form = useForm<CheckoutCustomerValues>({
     resolver: zodResolver(checkoutCustomerSchema),
     defaultValues: {

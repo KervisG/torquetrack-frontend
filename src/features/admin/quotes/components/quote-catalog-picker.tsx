@@ -42,7 +42,7 @@ export function QuoteCatalogPicker({ vehicle, canSearch, onAdd }: QuoteCatalogPi
         }
       : null
   const categories = useMemo(
-    () => catalogCategories(products.data ?? []),
+    () => catalogCategories((products.data ?? []).map((product) => product.category)),
     [products.data],
   )
   const matches = useMemo(() => {

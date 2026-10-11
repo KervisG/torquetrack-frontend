@@ -12,8 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { useSession } from '@/features/account/auth/hooks/use-session'
 import { getAccount } from '@/features/account/portal/api'
 import { accountKeys } from '@/features/account/portal/query-keys'
-import { listProducts } from '@/features/storefront/catalog/api'
-import { catalogKeys } from '@/features/storefront/catalog/query-keys'
+import { useCartProducts } from '@/features/storefront/catalog/hooks/use-cart-products'
 import { quoteRequestSchema, type QuoteRequestValues } from '@/lib/validators/quote-request'
 import { useCartStore } from '@/stores/cart-store'
 import { usePageMeta } from '@/lib/page-meta'
@@ -28,7 +27,7 @@ export function RequestQuotePage() {
     canonicalPath: '/quote',
   })
   const items = useCartStore((state) => state.items)
-  const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
+  const products = useCartProducts()
   const form = useForm<QuoteRequestValues>({
     resolver: zodResolver(quoteRequestSchema),
     defaultValues: { name: '', email: '', phone: '' },

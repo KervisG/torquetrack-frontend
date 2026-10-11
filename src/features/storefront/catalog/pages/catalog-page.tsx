@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -27,12 +27,13 @@ import { formatMoney, hasListedPrice } from '@/lib/money'
 import { SITE_NAME, usePageMeta } from '@/lib/page-meta'
 import { describeVehicle, useVehicleStore } from '@/stores/vehicle-store'
 
-import { listProducts } from '../api'
+import { searchProducts, type ProductSearch } from '../api'
 import { HomeHero } from '../components/home-hero'
 import { CategoryPicker } from '../components/category-picker'
 import { PriceRange } from '../components/price-range'
 import { ProductPhoto } from '../components/product-photo'
-import { catalogBrands, catalogCategories, catalogConditions, filterProducts } from '../filter-products'
+import { catalogCategories } from '../filter-products'
+import { useDebouncedValue } from '../hooks/use-debounced-value'
 import { useMediaQuery } from '../hooks/use-media-query'
 import { catalogReturnState, productPath } from '../product-path'
 import { catalogKeys } from '../query-keys'
@@ -42,6 +43,9 @@ const PAGE_SIZE = 16
 
 // Se espera a que el comprador deje de tipear antes de contar una búsqueda.
 const SEARCH_TRACK_DELAY_MS = 800
+
+// Y un poco menos antes de pedirle la lista al servidor.
+const SEARCH_DELAY_MS = 300
 
 // Mismo corte que `lg:` de Tailwind: desde ahí los filtros van en la columna.
 const DESKTOP_QUERY = '(min-width: 1024px)'
@@ -70,7 +74,28 @@ export function CatalogPage() {
   // ids de los campos. Sin matchMedia se asume escritorio.
   const isDesktop = useMediaQuery(DESKTOP_QUERY, true)
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
+  const minPrice = minParam ?? ''
+  const maxPrice = maxParam ?? ''
+  // Lo que se tipea o se arrastra espera a que el comprador termine.
+  const typed = useDebouncedValue(
+    useMemo(() => ({ query, minPrice, maxPrice }), [query, minPrice, maxPrice]),
+    SEARCH_DELAY_MS,
+  )
+  const search: ProductSearch = {
+    ...typed,
+    brand,
+    category,
+    condition,
+    sort,
+    page: currentPage,
+    vehicle: fitVehicle,
+  }
+  const products = useQuery({
+    queryKey: catalogKeys.search(search),
+    queryFn: ({ signal }) => searchProducts(search, signal),
+    // Al cambiar un filtro o de página se sigue viendo la lista anterior.
+    placeholderData: keepPreviousData,
+  })
 
   // Los filtros cambian la lista, no la página: el canonical sigue siendo `/`.
   usePageMeta({
@@ -89,43 +114,27 @@ export function CatalogPage() {
     return () => clearTimeout(timer)
   }, [query])
 
-  const brands = useMemo(() => catalogBrands(products.data || []), [products.data])
-  const categories = useMemo(() => catalogCategories(products.data || []), [products.data])
-  const conditions = useMemo(() => catalogConditions(products.data || []), [products.data])
-  // El tope sale del catálogo completo (`/api/products/` no pagina), nunca de
-  // la página visible.
-  const priceCeiling = useMemo(() => {
-    const prices = (products.data || []).map((product) => Number(product.price || 0))
-    return Math.ceil(Math.max(0, ...prices))
-  }, [products.data])
-  const minPrice = minParam ?? ''
-  const maxPrice = maxParam ?? ''
+  // Las opciones de los filtros salen de todo el catálogo (`facets`), nunca
+  // de la página visible ni de la búsqueda.
+  const facets = products.data?.facets
+  const brands = facets?.brands ?? []
+  const categories = useMemo(() => catalogCategories(facets?.categories ?? []), [facets])
+  const conditions = facets?.conditions ?? []
+  const priceCeiling = facets?.priceCeiling ?? 0
   const priceFiltered = Boolean(minPrice.trim() || maxPrice.trim())
   const activeFilterCount = [brand, category !== 'All', query.trim(), condition, priceFiltered].filter(
     Boolean,
   ).length
 
-  const rows = useMemo(() => {
-    const filtered = filterProducts(products.data || [], {
-      brand,
-      category,
-      query,
-      minPrice,
-      maxPrice,
-      condition,
-      vehicle: fitVehicle,
-    })
-    if (sort === 'low') return [...filtered].sort((a, b) => Number(a.price) - Number(b.price))
-    if (sort === 'high') return [...filtered].sort((a, b) => Number(b.price) - Number(a.price))
-    return filtered
-  }, [products.data, brand, category, query, minPrice, maxPrice, condition, fitVehicle, sort])
-
   // Los enlaces a la ficha llevan la query string actual para el "Back to Store".
   const returnState = catalogReturnState(params.toString())
 
-  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
-  const safePage = Math.min(currentPage, pageCount)
-  const pageRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  // El servidor filtra, ordena y pagina; una página pasada del final vuelve
+  // como la última.
+  const total = products.data?.count ?? 0
+  const pageRows = products.data?.results ?? []
+  const pageCount = products.data?.pageCount ?? 1
+  const safePage = products.data?.page ?? currentPage
 
   // Cambiar un filtro vuelve a la primera página. Lo que se tipea o se
   // arrastra reemplaza la entrada del historial en lugar de sumar una por tecla.
@@ -284,7 +293,7 @@ export function CatalogPage() {
               {products.isPending ? (
                 <span className="inline-block h-4 w-28 animate-pulse rounded-md bg-muted align-middle" />
               ) : (
-                resultLabel(rows.length, safePage)
+                resultLabel(total, safePage)
               )}
               {fitVehicle && !products.isPending ? ` that fit your ${describeVehicle(fitVehicle)}` : ''}
             </p>
@@ -312,7 +321,7 @@ export function CatalogPage() {
                       >
                         {products.isPending
                           ? 'Show parts'
-                          : `Show ${rows.length} ${rows.length === 1 ? 'result' : 'results'}`}
+                          : `Show  ${total === 1 ? 'result' : 'results'}`}
                       </StorefrontButton>
                     </SheetFooter>
                   </SheetContent>
@@ -336,7 +345,7 @@ export function CatalogPage() {
 
           {products.isPending ? (
             <ProductGridSkeleton />
-          ) : products.isError ? null : rows.length === 0 ? (
+          ) : products.isError ? null : total === 0 ? (
             <p className="text-sm text-muted-foreground">No parts match these filters.</p>
           ) : (
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

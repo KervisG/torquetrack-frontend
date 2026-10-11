@@ -1,5 +1,4 @@
 import { Phone, ShoppingCart } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 
@@ -18,9 +17,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useSession } from '@/features/account/auth/hooks/use-session'
-import { listProducts } from '@/features/storefront/catalog/api'
+import { useCartProducts } from '@/features/storefront/catalog/hooks/use-cart-products'
 import { productPath } from '@/features/storefront/catalog/product-path'
-import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { VehicleHeaderButton } from '@/features/storefront/garage/components/vehicle-header-button'
 import { VehicleSelectorDialog } from '@/features/storefront/garage/components/vehicle-selector-dialog'
 import { POLICY_PAGES } from '@/features/storefront/policies/policy-values'
@@ -36,7 +34,7 @@ export function StorefrontShell() {
   const remove = useCartStore((state) => state.remove)
   const setQty = useCartStore((state) => state.setQty)
   const count = items.reduce((sum, item) => sum + item.qty, 0)
-  const products = useQuery({ queryKey: catalogKeys.products(), queryFn: listProducts })
+  const products = useCartProducts()
   const rows = items
     .map((item) => {
       const product = products.data?.find((row) => row.id === item.id)

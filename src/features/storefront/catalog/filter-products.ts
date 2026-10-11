@@ -142,24 +142,6 @@ export function productFitsVehicle(
   return !year || (year >= from && year <= to)
 }
 
-// La marca es el fabricante de la pieza (Bosch, Garrett), no la del vehículo:
-// eso lo resuelve el selector de vehículo. "Alliant Power / Bosch" se parte en
-// marcas sueltas, y la lista sale de los productos.
-function manufacturerNames(product: Product): string[] {
-  return String(product.manufacturer || '')
-    .split('/')
-    .map((part) => part.trim())
-    .filter(Boolean)
-}
-
-export function catalogBrands(products: Product[]): string[] {
-  const names = new Set<string>()
-  for (const product of products) {
-    for (const name of manufacturerNames(product)) names.add(name)
-  }
-  return [...names].sort((a, b) => a.localeCompare(b, 'en'))
-}
-
 // Nombres legibles de las categorías que ya usamos. Una categoría nueva no
 // está aquí: el menú muestra el texto guardado en el producto.
 const CATEGORY_LABELS: Record<string, string> = {
@@ -194,11 +176,13 @@ export function categoryLabel(category: string): string {
   return CATEGORY_LABELS[canonical] || category.trim()
 }
 
-// Igual que las marcas: la lista sale de los productos, no de una lista fija.
-export function catalogCategories(products: Product[]): CatalogCategory[] {
+// La lista sale de las categorías guardadas en los productos (`facets` del
+// catálogo, o los productos del panel), no de una lista fija. Dos textos de
+// la misma categoría ("Injector", "Fuel Injectors") dan una sola opción.
+export function catalogCategories(names: Array<string | undefined>): CatalogCategory[] {
   const byValue = new Map<string, string>()
-  for (const product of products) {
-    const raw = String(product.category || '').trim()
+  for (const name of names) {
+    const raw = String(name || '').trim()
     if (!raw) continue
     const value = canonicalCategory(raw)
     if (!byValue.has(value)) byValue.set(value, categoryLabel(raw))
@@ -206,97 +190,4 @@ export function catalogCategories(products: Product[]): CatalogCategory[] {
   return [...byValue.entries()]
     .map(([value, label]) => ({ value, label }))
     .sort((a, b) => a.label.localeCompare(b.label, 'en'))
-}
-
-// Igual que las marcas: New, Remanufactured o Used salen de lo guardado
-// en el producto. Una condición nueva no hay que registrarla en la pantalla.
-export function catalogConditions(products: Product[]): string[] {
-  const names = new Set<string>()
-  for (const product of products) {
-    const name = String(product.condition || '').trim()
-    if (name) names.add(name)
-  }
-  return [...names].sort((a, b) => a.localeCompare(b, 'en'))
-}
-
-// Un número de parte se busca sin guiones, espacios ni mayúsculas: "502550"
-// encuentra "502-550". Un campo puede traer varios separados por "/" o ",",
-// y cada uno se compara por separado para no unir dos números distintos.
-function compactPartNumber(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function productPartNumbers(product: Product): string[] {
-  return [product.partNumber, product.oemPart, product.aftermarketPart, product.remanPart]
-    .flatMap((value) => String(value || '').split(/[/,]/))
-    .map(compactPartNumber)
-    .filter(Boolean)
-}
-
-function productMatchesQuery(product: Product, query: string): boolean {
-  const text = [
-    product.title,
-    product.category,
-    product.make,
-    product.model,
-    product.manufacturer,
-    product.type,
-    product.oemPart,
-    product.partNumber,
-    product.aftermarketPart,
-    product.remanPart,
-    product.fitment,
-    product.engine,
-    product.engineFamily,
-    product.engineCode,
-  ]
-    .join(' ')
-    .toLowerCase()
-  if (text.includes(query.trim().toLowerCase())) return true
-  const compact = compactPartNumber(query)
-  return Boolean(compact) && productPartNumbers(product).some((number) => number.includes(compact))
-}
-
-// Vacío no acota. El comprador puede escribir 1,000 o $1,000.
-function priceBound(value: string): number | null {
-  const trimmed = value.replace(/[$,\s]/g, '')
-  if (!trimmed) return null
-  const amount = Number(trimmed)
-  if (!Number.isFinite(amount)) return null
-  return amount
-}
-
-export function filterProducts(
-  products: Product[],
-  options: {
-    brand: string
-    category: string
-    query: string
-    minPrice: string
-    maxPrice: string
-    condition: string
-    vehicle: FitVehicle | null
-  },
-): Product[] {
-  const minPrice = priceBound(options.minPrice)
-  const maxPrice = priceBound(options.maxPrice)
-  const brand = options.brand.toLowerCase()
-  // La marca es un filtro. Sin ella la tienda lista el catálogo.
-  return products.filter((product) => {
-    const categoryMatch =
-      options.category === 'All' ||
-      canonicalCategory(product.category) === canonicalCategory(options.category)
-    const brandMatch =
-      !brand || manufacturerNames(product).some((name) => name.toLowerCase() === brand)
-    const price = Number(product.price || 0)
-    const priceMatch =
-      (minPrice === null || price >= minPrice) && (maxPrice === null || price <= maxPrice)
-    const conditionMatch =
-      !options.condition ||
-      String(product.condition || '').trim().toLowerCase() === options.condition.toLowerCase()
-    const vehicleMatch = options.vehicle ? productFitsVehicle(product, options.vehicle) : true
-    if (!categoryMatch || !brandMatch || !priceMatch || !conditionMatch || !vehicleMatch) return false
-    if (!options.query.trim()) return true
-    return productMatchesQuery(product, options.query)
-  })
 }
