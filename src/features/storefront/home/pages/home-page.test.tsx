@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { authenticatedSession, customerUser, sessionUser } from '@/test/admin-handlers'
-import { productsOk } from '@/test/catalog-handlers'
+import { productsApi, productsOk, sampleProduct } from '@/test/catalog-handlers'
 import { server } from '@/test/msw-server'
 import { renderApp } from '@/test/render-app'
 
@@ -14,20 +14,20 @@ function header() {
 
 describe('Storefront home', () => {
   it('introduces the store on / and links to the catalog', async () => {
-    server.use(productsOk())
+    server.use(
+      productsApi([sampleProduct, { ...sampleProduct, id: 'bosch-injector', category: 'Injector', manufacturer: 'Bosch' }]),
+    )
     renderApp('/')
 
     expect(await screen.findByRole('heading', { name: /find it/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /cart/i })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /Chevrolet \/ GMC/ })).toHaveAttribute(
-      'href',
-      '/shop?q=Chevrolet+%2F+GMC',
-    )
-    expect(screen.getByRole('link', { name: /Shop High-pressure fuel pump/ })).toHaveAttribute(
-      'href',
-      '/shop?category=HPFP',
-    )
-    expect(screen.getByRole('heading', { name: 'About TorqueTrack Diesel' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Fuel system' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /High-pressure fuel pump/ }),
+    ).toHaveAttribute('href', '/shop?category=HPFP')
+    expect(screen.getByText('Dorman')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Bosch' })).toHaveAttribute('src', '/images/brands/bosch.svg')
+    expect(screen.getByRole('region', { name: 'About us' })).toBeInTheDocument()
   })
 
   it('offers a single sign in when logged out', async () => {
