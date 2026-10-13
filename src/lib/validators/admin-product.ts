@@ -31,6 +31,7 @@ export function buildAdminProductSchema({ requirePrice }: { requirePrice: boolea
       partNumber: z.string().trim().min(1, 'Part number is required'),
       category: z.string().trim(),
       condition: z.string().trim(),
+      manufacturer: z.string().trim(),
       make: z.string().trim(),
       model: z.string().trim(),
       yearFrom: optionalYear,

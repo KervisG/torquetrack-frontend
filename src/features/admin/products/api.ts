@@ -1,7 +1,7 @@
 import { ApiError, apiRequest } from '@/lib/api-client'
 import { optionalNumber, type AdminProductValues } from '@/lib/validators/admin-product'
 
-import type { AdminApplication, AdminProduct, AdminProductImage } from './types'
+import type { AdminApplication, AdminBrand, AdminProduct, AdminProductImage } from './types'
 
 function num(value: unknown): number | undefined {
   const parsed = Number(value)
@@ -122,6 +122,46 @@ export function activateAdminProduct(id: string): Promise<{ ok: true }> {
   })
 }
 
+type BrandResponse = { ok: true; brand: AdminBrand }
+
+export function listAdminBrands(): Promise<AdminBrand[]> {
+  return apiRequest<AdminBrand[]>('/admin/brands')
+}
+
+export async function createAdminBrand(name: string): Promise<AdminBrand> {
+  const response = await apiRequest<BrandResponse>('/admin/brands', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  })
+  return response.brand
+}
+
+// Activa o desactiva la marca y, con ella, todos los productos que la llevan.
+export async function setAdminBrandActive(id: number, active: boolean): Promise<AdminBrand> {
+  const response = await apiRequest<BrandResponse>(`/admin/brands/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
+  })
+  return response.brand
+}
+
+export async function uploadBrandLogo(id: number, file: File): Promise<AdminBrand> {
+  const body = new FormData()
+  body.append('file', file)
+  const response = await apiRequest<BrandResponse>(`/admin/brands/${id}/logo`, {
+    method: 'POST',
+    body,
+  })
+  return response.brand
+}
+
+export async function deleteBrandLogo(id: number): Promise<AdminBrand> {
+  const response = await apiRequest<BrandResponse>(`/admin/brands/${id}/logo`, {
+    method: 'DELETE',
+  })
+  return response.brand
+}
+
 const EXPORT_FALLBACK_FILE_NAME = 'torquetrack-catalog.zip'
 
 function exportFileName(disposition: string | null): string {
@@ -159,6 +199,7 @@ export function productPayload(
     partNumber: values.partNumber,
     category: values.category,
     condition: values.condition,
+    manufacturer: values.manufacturer,
     make: values.make,
     model: values.model,
     yearFrom: optionalNumber(values.yearFrom),

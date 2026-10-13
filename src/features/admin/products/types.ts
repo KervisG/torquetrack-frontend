@@ -19,6 +19,20 @@ export type AdminProduct = Omit<Product, 'images'> & {
   internalNotes?: string
 }
 
+// Una marca es el nombre que llevan los productos en `manufacturer`;
+// `productCount` cuenta activos e inactivos.
+export type AdminBrand = {
+  id: number
+  name: string
+  logo: string | null
+  active: boolean
+  productCount: number
+}
+
+// Foto elegida en el alta, antes de que exista el producto. `url` es un object
+// URL para la miniatura: quien la descarta lo libera.
+export type PendingPhoto = { file: File; url: string }
+
 // Fila de `/api/admin/applications/`: misma forma que la de la tienda.
 export type { VehicleApplication as AdminApplication } from '@/features/storefront/garage/types'
 

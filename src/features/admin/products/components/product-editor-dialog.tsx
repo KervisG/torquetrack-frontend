@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useMemo, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Controller, useForm, type FieldPath } from 'react-hook-form'
 
 import { FormField } from '@/components/form-field'
@@ -16,9 +16,11 @@ import {
 import { friendlyApiError } from '@/lib/api-errors'
 import { buildAdminProductSchema, type AdminProductValues } from '@/lib/validators/admin-product'
 
-import type { AdminProduct } from '../types'
+import { PRODUCT_IMAGE_TYPES } from '../api'
+import type { AdminProduct, PendingPhoto } from '../types'
 
 import { CompatibleVehiclesField } from './compatible-vehicles-field'
+import { PendingPhotosField } from './pending-photos-field'
 import { ProductImagesField } from './product-images-field'
 
 const emptyProduct: AdminProductValues = {
@@ -26,6 +28,7 @@ const emptyProduct: AdminProductValues = {
   partNumber: '',
   category: '',
   condition: '',
+  manufacturer: '',
   make: '',
   model: '',
   yearFrom: '',
@@ -57,6 +60,7 @@ function valuesFor(product: AdminProduct): AdminProductValues {
     partNumber: product.partNumber ?? '',
     category: product.category ?? '',
     condition: product.condition ?? '',
+    manufacturer: product.manufacturer ?? '',
     make: product.make ?? '',
     model: product.model ?? '',
     yearFrom: product.yearFrom ? String(product.yearFrom) : '',
@@ -87,7 +91,16 @@ const STEPS: Array<{ id: string; label: string; fields: FieldPath<AdminProductVa
   {
     id: 'basics',
     label: 'Basics',
-    fields: ['title', 'partNumber', 'category', 'condition', 'description', 'warranty', 'active'],
+    fields: [
+      'title',
+      'partNumber',
+      'category',
+      'condition',
+      'manufacturer',
+      'description',
+      'warranty',
+      'active',
+    ],
   },
   {
     id: 'fitment',
@@ -114,6 +127,13 @@ const STEPS: Array<{ id: string; label: string; fields: FieldPath<AdminProductVa
   },
 ]
 
+// Una sola marca que el catálogo todavía no tiene. Con `/` son varias y el
+// logo no sabría a cuál ir.
+function isNewBrand(manufacturer: string, brands: string[]): boolean {
+  const name = manufacturer.trim().toLowerCase()
+  return Boolean(name) && !name.includes('/') && !brands.some((brand) => brand.toLowerCase() === name)
+}
+
 function stepOf(field: string): number {
   return STEPS.findIndex((step) => step.fields.some((name) => name === field))
 }
@@ -123,10 +143,16 @@ type ProductEditorDialogProps = {
   open: boolean
   submitting: boolean
   error: unknown
+  // Aviso que no es de un campo: el alta guardó pero una foto no subió.
+  notice?: string
+  // Marcas que ya tiene el catálogo, para el autocompletado.
+  brands: string[]
   canEditPricing: boolean
   canViewCosts: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (values: AdminProductValues) => void
+  // `photos` solo trae archivos en el alta; al editar, la galería guarda sola.
+  // `brandLogo` es el logo de una marca que nace con este producto.
+  onSubmit: (values: AdminProductValues, photos: File[], brandLogo: File | null) => void
 }
 
 export function ProductEditorDialog({
@@ -134,11 +160,26 @@ export function ProductEditorDialog({
   open,
   submitting,
   error,
+  notice,
+  brands,
   canEditPricing,
   canViewCosts,
   onOpenChange,
   onSubmit,
 }: ProductEditorDialogProps) {
+  const [brandLogo, setBrandLogo] = useState<File | null>(null)
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
+  // Al cerrar se liberan las miniaturas que quedaron sin descartar.
+  const pendingPhotosRef = useRef(pendingPhotos)
+  useEffect(() => {
+    pendingPhotosRef.current = pendingPhotos
+  }, [pendingPhotos])
+  useEffect(
+    () => () => {
+      for (const photo of pendingPhotosRef.current) URL.revokeObjectURL(photo.url)
+    },
+    [],
+  )
   const schema = useMemo(() => buildAdminProductSchema({ requirePrice: canEditPricing }), [canEditPricing])
   const form = useForm<AdminProductValues>({
     resolver: zodResolver(schema),
@@ -167,16 +208,25 @@ export function ProductEditorDialog({
       return
     }
     if (submitting) return
-    if (form.formState.isDirty && !window.confirm('You have unsaved changes. Discard them?')) return
+    const dirty = form.formState.isDirty || pendingPhotos.length > 0
+    if (dirty && !window.confirm('You have unsaved changes. Discard them?')) return
     onOpenChange(false)
   }
 
   // Guarda desde cualquier paso; si la validación falla, va al primer paso
   // que tiene un error para que se vea.
-  const save = form.handleSubmit(onSubmit, (invalid) => {
-    const failed = STEPS.findIndex((step) => step.fields.some((field) => field in invalid))
-    if (failed >= 0) steps.goTo(failed)
-  })
+  const save = form.handleSubmit(
+    (values) =>
+      onSubmit(
+        values,
+        pendingPhotos.map((photo) => photo.file),
+        isNewBrand(values.manufacturer, brands) ? brandLogo : null,
+      ),
+    (invalid) => {
+      const failed = STEPS.findIndex((step) => step.fields.some((field) => field in invalid))
+      if (failed >= 0) steps.goTo(failed)
+    },
+  )
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -188,6 +238,7 @@ export function ProductEditorDialog({
   }
 
   const errors = form.formState.errors
+  const newBrand = isNewBrand(form.watch('manufacturer'), brands)
   const at = (id: string) => STEPS[steps.current].id === id
 
   return (
@@ -236,6 +287,34 @@ export function ProductEditorDialog({
                   />
                   <FormField id="product-category" label="Category" {...form.register('category')} />
                   <FormField id="product-condition" label="Condition" {...form.register('condition')} />
+                  <FormField
+                    id="product-manufacturer"
+                    label="Manufacturer"
+                    list="product-manufacturer-options"
+                    autoComplete="off"
+                    {...form.register('manufacturer')}
+                  />
+                  {/* Sugiere las marcas ya cargadas: un nombre escrito distinto
+                      sería otra marca en el filtro de la tienda. */}
+                  <datalist id="product-manufacturer-options">
+                    {brands.map((brand) => (
+                      <option key={brand} value={brand} />
+                    ))}
+                  </datalist>
+                  {newBrand ? (
+                    <FormField
+                      id="product-brand-logo"
+                      label="Brand logo (optional)"
+                      type="file"
+                      accept={PRODUCT_IMAGE_TYPES}
+                      onChange={(event) => setBrandLogo(event.target.files?.[0] ?? null)}
+                      hint={
+                        <p className="text-xs text-muted-foreground">
+                          New brand: it is created when you save the product.
+                        </p>
+                      }
+                    />
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="product-description">Description</Label>
@@ -375,11 +454,15 @@ export function ProductEditorDialog({
                 {product ? (
                   <ProductImagesField productId={product.id} initialImages={product.images ?? []} />
                 ) : (
-                  // Una foto se guarda en la galería de un producto que ya existe.
-                  <p className="text-sm text-muted-foreground">
-                    Save the product first, then open it again to add photos.
-                  </p>
+                  <PendingPhotosField
+                    photos={pendingPhotos}
+                    disabled={submitting}
+                    onChange={setPendingPhotos}
+                  />
                 )}
+                <p className="text-sm text-muted-foreground">
+                  Or paste an image link. It is only used while the product has no uploaded photos.
+                </p>
                 <FormField id="product-image" label="Image URL" {...form.register('image')} />
               </fieldset>
               {canViewCosts ? (
@@ -413,9 +496,9 @@ export function ProductEditorDialog({
               ) : null}
             </StepPanel>
 
-            {generalError ? (
+            {generalError || notice ? (
               <p role="alert" className="text-sm text-destructive">
-                {generalError}
+                {generalError || notice}
               </p>
             ) : null}
           </div>

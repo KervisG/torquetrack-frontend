@@ -15,7 +15,7 @@ import {
 import { adminProductKeys } from '../query-keys'
 import type { AdminProductImage } from '../types'
 
-const MAX_IMAGES = 12
+export const MAX_IMAGES = 12
 
 type ProductImagesFieldProps = {
   productId: string

@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/app-shell/page-header'
 import { Button } from '@/components/ui/button'
 import { PermissionNotice } from '@/features/admin/auth/components/permission-notice'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
+import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { ApiError } from '@/lib/api-client'
 import type { AdminProductValues } from '@/lib/validators/admin-product'
 
@@ -18,16 +19,32 @@ import {
   activateAdminProduct,
   deactivateAdminProduct,
   exportAdminProducts,
+  listAdminBrands,
   listAdminProducts,
   productPayload,
   saveAdminProduct,
+  uploadBrandLogo,
+  uploadProductImage,
 } from '../api'
+import { BrandsDialog } from '../components/brands-dialog'
 import { ProductEditorDialog } from '../components/product-editor-dialog'
 import { ProductLayoutToggle, type ProductLayout } from '../components/product-layout-toggle'
 import { ProductsCardGrid } from '../components/products-card-grid'
 import { ProductsTable } from '../components/products-table'
 import { adminProductKeys } from '../query-keys'
 import type { AdminProduct } from '../types'
+
+const PHOTOS_FAILED =
+  'The product was saved, but some photos could not be uploaded. Add them again under Photos & notes.'
+const LOGO_FAILED =
+  'The product was saved, but the brand logo could not be uploaded. Add it under Brands.'
+
+type SaveVariables = {
+  id: string
+  values: AdminProductValues
+  photos: File[]
+  brandLogo: File | null
+}
 
 function matches(product: AdminProduct, search: string): boolean {
   const needle = search.trim().toLowerCase()
@@ -86,6 +103,13 @@ export function ProductsPage() {
   const [editing, setEditing] = useState<AdminProduct | null | undefined>(() =>
     canEdit && params.has('new') ? null : undefined,
   )
+  const [photoNotice, setPhotoNotice] = useState('')
+  const [brandsOpen, setBrandsOpen] = useState(false)
+  const brands = useQuery({
+    queryKey: adminProductKeys.brands(),
+    queryFn: listAdminBrands,
+    enabled: allowed,
+  })
   const products = useQuery({
     queryKey: adminProductKeys.list(),
     queryFn: listAdminProducts,
@@ -97,16 +121,49 @@ export function ProductsPage() {
     // todavía está despertando.
     retry: (failureCount, error) =>
       failureCount < 3 && !(error instanceof ApiError && error.status < 500),
-    mutationFn: (values: AdminProductValues) => {
-      const id = editing?.id ?? productIdFromTitle(values.title)
-      return saveAdminProduct(
+    mutationFn: ({ id, values }: SaveVariables) =>
+      saveAdminProduct(
         id,
         productPayload(editing ?? undefined, values, { canEditPricing, canViewCosts }),
+      ),
+    // Las fotos y el logo se suben acá y no en `mutationFn`: un reintento del
+    // PUT volvería a subir lo que ya quedó guardado.
+    onSuccess: async (_saved, { id, values, photos, brandLogo }) => {
+      let photosFailed = false
+      try {
+        for (const file of photos) await uploadProductImage(id, file)
+      } catch {
+        photosFailed = true
+      }
+      let logoFailed = false
+      if (brandLogo) {
+        try {
+          // La marca nació con el producto: recién ahora tiene id.
+          const name = values.manufacturer.trim().toLowerCase()
+          const brand = (await listAdminBrands()).find((row) => row.name.toLowerCase() === name)
+          if (!brand) throw new Error('Brand not found')
+          await uploadBrandLogo(brand.id, brandLogo)
+        } catch {
+          logoFailed = true
+        }
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminProductKeys.all }),
+        // La portada también se ve en la tienda.
+        ...(photos.length ? [queryClient.invalidateQueries({ queryKey: catalogKeys.all })] : []),
+      ])
+      setPhotoNotice(
+        [photosFailed ? PHOTOS_FAILED : '', logoFailed ? LOGO_FAILED : ''].filter(Boolean).join(' '),
       )
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: adminProductKeys.all })
-      closeEditor()
+      // Si faltaron fotos, el editor sigue abierto sobre el producto ya
+      // creado, con la galería lista para reintentar.
+      const created = photosFailed
+        ? queryClient
+            .getQueryData<AdminProduct[]>(adminProductKeys.list())
+            ?.find((product) => product.id === id)
+        : undefined
+      if (created) setEditing(created)
+      else closeEditor()
     },
   })
   const deactivate = useMutation({
@@ -130,6 +187,7 @@ export function ProductsPage() {
     [products.data, search],
   )
   const paged = usePagedRows(rows, search)
+  const brandNames = useMemo(() => (brands.data ?? []).map((brand) => brand.name), [brands.data])
 
   function closeEditor() {
     setEditing(undefined)
@@ -138,11 +196,13 @@ export function ProductsPage() {
 
   function openEditor(product: AdminProduct) {
     save.reset()
+    setPhotoNotice('')
     setEditing(product)
   }
 
   function openNew() {
     save.reset()
+    setPhotoNotice('')
     setEditing(null)
   }
 
@@ -167,6 +227,11 @@ export function ProductsPage() {
             >
               {exportCatalog.isPending ? 'Exporting…' : 'Export'}
             </Button>
+            {canEdit ? (
+              <Button type="button" variant="outline" onClick={() => setBrandsOpen(true)}>
+                Brands
+              </Button>
+            ) : null}
             {canEdit ? (
               <Button type="button" onClick={() => openNew()}>
                 New product
@@ -241,6 +306,11 @@ export function ProductsPage() {
         )}
         {deactivate.error ? <FormError error={deactivate.error} /> : null}
         {activate.error ? <FormError error={activate.error} /> : null}
+        {photoNotice && editing === undefined ? (
+          <p role="alert" className="text-sm text-destructive">
+            {photoNotice}
+          </p>
+        ) : null}
       </div>
       {editing !== undefined ? (
         <ProductEditorDialog
@@ -249,13 +319,25 @@ export function ProductsPage() {
           open
           submitting={save.isPending}
           error={save.error}
+          notice={photoNotice}
+          brands={brandNames}
           canEditPricing={canEditPricing}
           canViewCosts={canViewCosts}
           onOpenChange={(open) => {
-            if (!open) closeEditor()
+            if (open) return
+            setPhotoNotice('')
+            closeEditor()
           }}
-          onSubmit={(values) => save.mutate(values)}
+          onSubmit={(values, photos, brandLogo) => {
+            setPhotoNotice('')
+            // El id se decide una vez: un reintento del PUT reusa el mismo.
+            const id = editing?.id ?? productIdFromTitle(values.title)
+            save.mutate({ id, values, photos, brandLogo })
+          }}
         />
+      ) : null}
+      {brandsOpen ? (
+        <BrandsDialog brands={brands.data ?? []} open onOpenChange={setBrandsOpen} />
       ) : null}
     </section>
   )

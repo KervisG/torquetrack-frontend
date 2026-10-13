@@ -36,6 +36,7 @@ describe('ProductsPage', () => {
     server.use(
       authenticatedSession(),
       http.get('/api/admin/products/', () => HttpResponse.json(products)),
+      http.get('/api/admin/brands/', () => HttpResponse.json([])),
     )
     renderApp('/admin/products')
 
@@ -64,6 +65,7 @@ describe('ProductsPage', () => {
     server.use(
       authenticatedSession(),
       http.get('/api/admin/products/', () => HttpResponse.json(products)),
+      http.get('/api/admin/brands/', () => HttpResponse.json([])),
       http.put('/api/admin/products/pump/', async ({ request }) => {
         body = await request.json()
         return HttpResponse.json({ ok: true })
