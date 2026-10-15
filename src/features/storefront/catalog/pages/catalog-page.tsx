@@ -29,9 +29,11 @@ import { describeVehicle, useVehicleStore } from '@/stores/vehicle-store'
 
 import { searchProducts, type ProductSearch } from '../api'
 import { CategoryPicker } from '../components/category-picker'
+import { HouseBrandBadge } from '../components/house-brand-badge'
 import { PriceRange } from '../components/price-range'
 import { ProductPhoto } from '../components/product-photo'
 import { catalogCategories } from '../filter-products'
+import { isHouseBrand } from '../house-brand'
 import { useDebouncedValue } from '../hooks/use-debounced-value'
 import { useMediaQuery } from '../hooks/use-media-query'
 import { catalogReturnState, productPath } from '../product-path'
@@ -365,10 +367,15 @@ export function CatalogPage() {
                     />
                   </Link>
                   <div className="flex flex-1 flex-col p-4">
-                    {product.condition ? (
-                      <p className="mb-2 w-fit rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700">
-                        {product.condition}
-                      </p>
+                    {isHouseBrand(product.manufacturer) || product.condition ? (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {isHouseBrand(product.manufacturer) ? <HouseBrandBadge /> : null}
+                        {product.condition ? (
+                          <p className="w-fit rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700">
+                            {product.condition}
+                          </p>
+                        ) : null}
+                      </div>
                     ) : null}
                     <Link
                       to={productPath(product)}

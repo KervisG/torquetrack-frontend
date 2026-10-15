@@ -6,7 +6,9 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { CartQuantityLimit } from '@/components/cart-quantity-limit'
 import { StorefrontButton } from '@/components/storefront-button'
 import { getProduct } from '@/features/storefront/catalog/api'
+import { HouseBrandBadge } from '@/features/storefront/catalog/components/house-brand-badge'
 import { ProductGallery } from '@/features/storefront/catalog/components/product-gallery'
+import { isHouseBrand } from '@/features/storefront/catalog/house-brand'
 import {
   categoryLabel,
   isEmissionsCategory,
@@ -88,7 +90,8 @@ export function ProductPage() {
         <StorefrontButton asChild tone="link" className="px-0 text-neutral-500">
           <Link to={backTo}>← Back to Store</Link>
         </StorefrontButton>
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {isHouseBrand(item.manufacturer) ? <HouseBrandBadge /> : null}
           {category ? <Chip>{category}</Chip> : null}
           {item.condition ? <Chip>{item.condition}</Chip> : null}
         </div>
