@@ -18,8 +18,11 @@ import type { AdminProductValues } from '@/lib/validators/admin-product'
 import {
   activateAdminProduct,
   deactivateAdminProduct,
+  deleteAdminProduct,
+  createAdminCategory,
   exportAdminProducts,
   listAdminBrands,
+  listAdminCategories,
   listAdminProducts,
   productPayload,
   saveAdminProduct,
@@ -27,7 +30,12 @@ import {
   uploadProductImage,
 } from '../api'
 import { BrandsDialog } from '../components/brands-dialog'
-import { ProductEditorDialog } from '../components/product-editor-dialog'
+import { CategoriesDialog } from '../components/categories-dialog'
+import { DeleteProductDialog } from '../components/delete-product-dialog'
+import {
+  ProductEditorDialog,
+  type ProductSubmitExtras,
+} from '../components/product-editor-dialog'
 import { ProductLayoutToggle, type ProductLayout } from '../components/product-layout-toggle'
 import { ProductsCardGrid } from '../components/products-card-grid'
 import { ProductsTable } from '../components/products-table'
@@ -39,12 +47,7 @@ const PHOTOS_FAILED =
 const LOGO_FAILED =
   'The product was saved, but the brand logo could not be uploaded. Add it under Brands.'
 
-type SaveVariables = {
-  id: string
-  values: AdminProductValues
-  photos: File[]
-  brandLogo: File | null
-}
+type SaveVariables = ProductSubmitExtras & { id: string; values: AdminProductValues }
 
 function matches(product: AdminProduct, search: string): boolean {
   const needle = search.trim().toLowerCase()
@@ -105,6 +108,13 @@ export function ProductsPage() {
   )
   const [photoNotice, setPhotoNotice] = useState('')
   const [brandsOpen, setBrandsOpen] = useState(false)
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [deleting, setDeleting] = useState<AdminProduct | null>(null)
+  const categories = useQuery({
+    queryKey: adminProductKeys.categories(),
+    queryFn: listAdminCategories,
+    enabled: allowed,
+  })
   const brands = useQuery({
     queryKey: adminProductKeys.brands(),
     queryFn: listAdminBrands,
@@ -121,11 +131,21 @@ export function ProductsPage() {
     // todavía está despertando.
     retry: (failureCount, error) =>
       failureCount < 3 && !(error instanceof ApiError && error.status < 500),
-    mutationFn: ({ id, values }: SaveVariables) =>
-      saveAdminProduct(
+    mutationFn: async ({ id, values, newCategoryLine }: SaveVariables) => {
+      if (newCategoryLine) {
+        // La categoría va antes para que el producto ya nazca en su sección.
+        // Un 400 es que ya existe (un reintento del PUT la creó): se sigue.
+        try {
+          await createAdminCategory(values.category, newCategoryLine)
+        } catch (error) {
+          if (!(error instanceof ApiError && error.status === 400)) throw error
+        }
+      }
+      return saveAdminProduct(
         id,
         productPayload(editing ?? undefined, values, { canEditPricing, canViewCosts }),
-      ),
+      )
+    },
     // Las fotos y el logo se suben acá y no en `mutationFn`: un reintento del
     // PUT volvería a subir lo que ya quedó guardado.
     onSuccess: async (_saved, { id, values, photos, brandLogo }) => {
@@ -172,6 +192,17 @@ export function ProductsPage() {
       await queryClient.invalidateQueries({ queryKey: adminProductKeys.all })
     },
   })
+  const remove = useMutation({
+    mutationFn: (product: AdminProduct) => deleteAdminProduct(product.id),
+    onSuccess: async () => {
+      setDeleting(null)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminProductKeys.all }),
+        // El producto también desaparece de la tienda.
+        queryClient.invalidateQueries({ queryKey: catalogKeys.all }),
+      ])
+    },
+  })
   const exportCatalog = useMutation({
     mutationFn: exportAdminProducts,
     onSuccess: ({ blob, fileName }) => saveFile(blob, fileName),
@@ -198,6 +229,11 @@ export function ProductsPage() {
     save.reset()
     setPhotoNotice('')
     setEditing(product)
+  }
+
+  function confirmDelete(product: AdminProduct) {
+    remove.reset()
+    setDeleting(product)
   }
 
   function openNew() {
@@ -227,6 +263,11 @@ export function ProductsPage() {
             >
               {exportCatalog.isPending ? 'Exporting…' : 'Export'}
             </Button>
+            {canEdit ? (
+              <Button type="button" variant="outline" onClick={() => setCategoriesOpen(true)}>
+                Categories
+              </Button>
+            ) : null}
             {canEdit ? (
               <Button type="button" variant="outline" onClick={() => setBrandsOpen(true)}>
                 Brands
@@ -282,6 +323,7 @@ export function ProductsPage() {
                 onEdit={openEditor}
                 onDeactivate={(product) => deactivate.mutate(product)}
                 onActivate={(product) => activate.mutate(product)}
+                onDelete={confirmDelete}
               />
             ) : (
               <ProductsCardGrid
@@ -292,6 +334,7 @@ export function ProductsPage() {
                 onEdit={openEditor}
                 onDeactivate={(product) => deactivate.mutate(product)}
                 onActivate={(product) => activate.mutate(product)}
+                onDelete={confirmDelete}
               />
             )}
             <ListPagination
@@ -328,13 +371,28 @@ export function ProductsPage() {
             setPhotoNotice('')
             closeEditor()
           }}
-          onSubmit={(values, photos, brandLogo) => {
+          categories={categories.data ?? []}
+          onSubmit={(values, extras) => {
             setPhotoNotice('')
             // El id se decide una vez: un reintento del PUT reusa el mismo.
             const id = editing?.id ?? productIdFromTitle(values.title)
-            save.mutate({ id, values, photos, brandLogo })
+            save.mutate({ id, values, ...extras })
           }}
         />
+      ) : null}
+      {deleting ? (
+        <DeleteProductDialog
+          product={deleting}
+          deleting={remove.isPending}
+          error={remove.error}
+          onConfirm={(product) => remove.mutate(product)}
+          onOpenChange={(open) => {
+            if (!open) setDeleting(null)
+          }}
+        />
+      ) : null}
+      {categoriesOpen ? (
+        <CategoriesDialog categories={categories.data ?? []} open onOpenChange={setCategoriesOpen} />
       ) : null}
       {brandsOpen ? (
         <BrandsDialog brands={brands.data ?? []} open onOpenChange={setBrandsOpen} />

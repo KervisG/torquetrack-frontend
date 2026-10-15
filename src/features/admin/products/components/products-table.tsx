@@ -11,6 +11,7 @@ type ProductsTableProps = {
   onEdit: (product: AdminProduct) => void
   onDeactivate: (product: AdminProduct) => void
   onActivate: (product: AdminProduct) => void
+  onDelete: (product: AdminProduct) => void
   deactivatingId: string | null
   activatingId: string | null
 }
@@ -21,6 +22,7 @@ export function ProductsTable({
   onEdit,
   onDeactivate,
   onActivate,
+  onDelete,
   deactivatingId,
   activatingId,
 }: ProductsTableProps) {
@@ -67,9 +69,20 @@ export function ProductsTable({
               </td>
               {canEdit ? (
                 <td className="px-4 py-4">
-                  <Button type="button" variant="outline" size="sm" onClick={() => onEdit(product)}>
-                    Edit
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => onEdit(product)}>
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => onDelete(product)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </td>
               ) : null}
             </tr>

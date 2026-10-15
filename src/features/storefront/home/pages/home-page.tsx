@@ -10,55 +10,71 @@ import { shopPath } from '@/features/storefront/catalog/product-path'
 import { catalogKeys } from '@/features/storefront/catalog/query-keys'
 import { brandLogo } from '@/features/storefront/home/brand-logos'
 import { SITE_NAME, usePageMeta } from '@/lib/page-meta'
+import {
+  DEFAULT_PRODUCT_LINE,
+  PRODUCT_LINE_OPTIONS,
+  type ProductLineValue,
+} from '@/lib/product-lines'
 
 type OverviewCategory = CatalogOverview['categories'][number]
 
 type ProductLine = {
-  title: string
+  id: ProductLineValue
   description: string
   categories: string[]
 }
 
-// Las líneas de producto de la portada. Cada una junta categorías canónicas
-// del catálogo; una categoría que no esté en ninguna cae en "More parts".
+// Las líneas de producto de la portada. La línea de cada categoría la decide
+// el panel (`line` del resumen del catálogo). `categories` fija el orden de
+// las tarjetas de siempre y ubica una categoría si el backend aún no manda
+// `line`; una categoría nueva va después, por cantidad de productos.
 const PRODUCT_LINES: ProductLine[] = [
   {
-    title: 'Fuel system',
+    id: 'FUEL_SYSTEM',
     description:
       'Injectors, high-pressure pumps, fuel rails and contamination kits, new and remanufactured, matched to your engine by part number.',
     categories: ['INJECTOR', 'HPFP', 'HPOP', 'FUEL RAIL', 'CONTAMINATION KIT'],
   },
   {
-    title: 'Turbo & air',
+    id: 'TURBO_AIR',
     description:
       'Complete turbochargers and actuators to bring boost and towing power back, ready to install.',
     categories: ['TURBO', 'TURBO ACTUATOR'],
   },
   {
-    title: 'Emission systems',
+    id: 'EMISSIONS',
     description:
       'Particulate filters, oxidation catalysts, DEF systems and EGR parts to keep your truck compliant and out of limp mode.',
     categories: ['DPF', 'DOC', 'SCR', 'EGR'],
   },
+  {
+    id: DEFAULT_PRODUCT_LINE,
+    description: 'Other diesel parts we carry for the trucks we cover.',
+    categories: [],
+  },
 ]
 
-const OTHER_LINE: ProductLine = {
-  title: 'More parts',
-  description: 'Other diesel parts we carry for the trucks we cover.',
-  categories: [],
+function lineOf(category: OverviewCategory): string {
+  if (category.line) return category.line
+  const known = PRODUCT_LINES.find((line) => line.categories.includes(category.value))
+  return known?.id ?? DEFAULT_PRODUCT_LINE
 }
 
 function productLines(categories: OverviewCategory[]) {
-  const grouped = new Set(PRODUCT_LINES.flatMap((line) => line.categories))
-  return [
-    ...PRODUCT_LINES.map((line) => ({
-      ...line,
-      items: line.categories.flatMap(
-        (value) => categories.find((category) => category.value === value) ?? [],
-      ),
-    })),
-    { ...OTHER_LINE, items: categories.filter((category) => !grouped.has(category.value)) },
-  ].filter((line) => line.items.length)
+  return PRODUCT_LINES.map((line) => {
+    const position = (category: OverviewCategory) => {
+      const index = line.categories.indexOf(category.value)
+      return index < 0 ? line.categories.length : index
+    }
+    return {
+      title: PRODUCT_LINE_OPTIONS.find((option) => option.value === line.id)?.label ?? line.id,
+      description: line.description,
+      // `sort` es estable: las categorías nuevas conservan el orden del backend.
+      items: categories
+        .filter((category) => lineOf(category) === line.id)
+        .sort((a, b) => position(a) - position(b)),
+    }
+  }).filter((line) => line.items.length)
 }
 
 function distinctBrands(items: OverviewCategory[]): string[] {

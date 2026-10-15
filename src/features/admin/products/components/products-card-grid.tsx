@@ -13,6 +13,7 @@ type ProductsCardGridProps = {
   onEdit: (product: AdminProduct) => void
   onDeactivate: (product: AdminProduct) => void
   onActivate: (product: AdminProduct) => void
+  onDelete: (product: AdminProduct) => void
   deactivatingId: string | null
   activatingId: string | null
 }
@@ -28,6 +29,7 @@ export function ProductsCardGrid({
   onEdit,
   onDeactivate,
   onActivate,
+  onDelete,
   deactivatingId,
   activatingId,
 }: ProductsCardGridProps) {
@@ -77,9 +79,20 @@ export function ProductsCardGrid({
                 )}
               </div>
               {canEdit ? (
-                <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => onEdit(product)}>
-                  Edit
-                </Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => onEdit(product)}>
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => onDelete(product)}
+                  >
+                    Delete
+                  </Button>
+                </div>
               ) : null}
             </div>
           </li>

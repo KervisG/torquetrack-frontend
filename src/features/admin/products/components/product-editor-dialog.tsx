@@ -13,11 +13,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { canonicalCategory } from '@/features/storefront/catalog/filter-products'
 import { friendlyApiError } from '@/lib/api-errors'
+import {
+  DEFAULT_PRODUCT_LINE,
+  PRODUCT_LINE_OPTIONS,
+  type ProductLineValue,
+} from '@/lib/product-lines'
 import { buildAdminProductSchema, type AdminProductValues } from '@/lib/validators/admin-product'
 
 import { PRODUCT_IMAGE_TYPES } from '../api'
-import type { AdminProduct, PendingPhoto } from '../types'
+import type { AdminCategory, AdminProduct, PendingPhoto } from '../types'
 
 import { CompatibleVehiclesField } from './compatible-vehicles-field'
 import { PendingPhotosField } from './pending-photos-field'
@@ -150,9 +156,27 @@ type ProductEditorDialogProps = {
   canEditPricing: boolean
   canViewCosts: boolean
   onOpenChange: (open: boolean) => void
-  // `photos` solo trae archivos en el alta; al editar, la galería guarda sola.
-  // `brandLogo` es el logo de una marca que nace con este producto.
-  onSubmit: (values: AdminProductValues, photos: File[], brandLogo: File | null) => void
+  categories: AdminCategory[]
+  onSubmit: (values: AdminProductValues, extras: ProductSubmitExtras) => void
+}
+
+// Lo que se guarda aparte del producto, después o antes de su PUT.
+export type ProductSubmitExtras = {
+  // Solo en el alta; al editar, la galería guarda sola.
+  photos: File[]
+  // Logo de una marca que nace con este producto.
+  brandLogo: File | null
+  // Sección de la portada de una categoría que nace con este producto.
+  newCategoryLine: ProductLineValue | null
+}
+
+const NEW_CATEGORY = '__new__'
+// El producto trae una categoría que el catálogo no tiene: se muestra tal cual.
+const UNLISTED_CATEGORY = '__unlisted__'
+
+function findCategory(categories: AdminCategory[], text: string): AdminCategory | undefined {
+  const value = canonicalCategory(text)
+  return value ? categories.find((category) => category.value === value) : undefined
 }
 
 export function ProductEditorDialog({
@@ -162,12 +186,15 @@ export function ProductEditorDialog({
   error,
   notice,
   brands,
+  categories,
   canEditPricing,
   canViewCosts,
   onOpenChange,
   onSubmit,
 }: ProductEditorDialogProps) {
   const [brandLogo, setBrandLogo] = useState<File | null>(null)
+  const [creatingCategory, setCreatingCategory] = useState(false)
+  const [newCategoryLine, setNewCategoryLine] = useState<ProductLineValue>(DEFAULT_PRODUCT_LINE)
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
   // Al cerrar se liberan las miniaturas que quedaron sin descartar.
   const pendingPhotosRef = useRef(pendingPhotos)
@@ -217,11 +244,15 @@ export function ProductEditorDialog({
   // que tiene un error para que se vea.
   const save = form.handleSubmit(
     (values) =>
-      onSubmit(
-        values,
-        pendingPhotos.map((photo) => photo.file),
-        isNewBrand(values.manufacturer, brands) ? brandLogo : null,
-      ),
+      onSubmit(values, {
+        photos: pendingPhotos.map((photo) => photo.file),
+        brandLogo: isNewBrand(values.manufacturer, brands) ? brandLogo : null,
+        // Un nombre que ya existe escrito de otra forma no es una categoría nueva.
+        newCategoryLine:
+          creatingCategory && values.category && !findCategory(categories, values.category)
+            ? newCategoryLine
+            : null,
+      }),
     (invalid) => {
       const failed = STEPS.findIndex((step) => step.fields.some((field) => field in invalid))
       if (failed >= 0) steps.goTo(failed)
@@ -239,6 +270,25 @@ export function ProductEditorDialog({
 
   const errors = form.formState.errors
   const newBrand = isNewBrand(form.watch('manufacturer'), brands)
+
+  // El producto guarda la categoría como texto; el selector la cruza con las
+  // categorías del catálogo por su forma canónica.
+  const categoryText = form.watch('category')
+  const matchedCategory = findCategory(categories, categoryText)
+  const categoryOption = creatingCategory
+    ? NEW_CATEGORY
+    : matchedCategory
+      ? String(matchedCategory.id)
+      : categoryText.trim()
+        ? UNLISTED_CATEGORY
+        : ''
+
+  function selectCategory(option: string) {
+    if (option === UNLISTED_CATEGORY) return
+    setCreatingCategory(option === NEW_CATEGORY)
+    const chosen = categories.find((category) => String(category.id) === option)
+    form.setValue('category', chosen?.name ?? '', { shouldDirty: true })
+  }
   const at = (id: string) => STEPS[steps.current].id === id
 
   return (
@@ -285,7 +335,52 @@ export function ProductEditorDialog({
                     error={errors.partNumber?.message}
                     {...form.register('partNumber')}
                   />
-                  <FormField id="product-category" label="Category" {...form.register('category')} />
+                  <div className="space-y-2">
+                    <Label htmlFor="product-category">Category</Label>
+                    <select
+                      id="product-category"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      value={categoryOption}
+                      onChange={(event) => selectCategory(event.target.value)}
+                    >
+                      <option value="">No category</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={String(category.id)}>
+                          {category.name}
+                        </option>
+                      ))}
+                      {categoryOption === UNLISTED_CATEGORY ? (
+                        <option value={UNLISTED_CATEGORY}>{categoryText}</option>
+                      ) : null}
+                      <option value={NEW_CATEGORY}>New category…</option>
+                    </select>
+                  </div>
+                  {creatingCategory ? (
+                    <>
+                      <FormField
+                        id="product-new-category"
+                        label="New category name"
+                        {...form.register('category')}
+                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="product-category-line">Home section</Label>
+                        <select
+                          id="product-category-line"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          value={newCategoryLine}
+                          onChange={(event) =>
+                            setNewCategoryLine(event.target.value as ProductLineValue)
+                          }
+                        >
+                          {PRODUCT_LINE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  ) : null}
                   <FormField id="product-condition" label="Condition" {...form.register('condition')} />
                   <FormField
                     id="product-manufacturer"

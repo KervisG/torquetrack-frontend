@@ -75,7 +75,14 @@ export async function listProductsByIds(ids: string[]): Promise<Product[]> {
 // de vehículo, y los fabricantes de cada categoría. Sale de los datos reales.
 export type CatalogOverview = {
   productCount: number
-  categories: Array<{ value: string; label: string; count: number; brands: string[] }>
+  // `line` es la sección de la portada que el panel le asignó a la categoría.
+  categories: Array<{
+    value: string
+    label: string
+    count: number
+    brands: string[]
+    line?: string
+  }>
   makes: Array<{ name: string; count: number }>
 }
 

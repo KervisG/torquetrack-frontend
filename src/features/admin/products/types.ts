@@ -1,4 +1,5 @@
 import type { Product, ProductImage } from '@/features/storefront/catalog/types'
+import type { ProductLineValue } from '@/lib/product-lines'
 
 // La galería como la devuelve el panel: con el orden y el tamaño de cada foto.
 export type AdminProductImage = ProductImage & {
@@ -26,6 +27,16 @@ export type AdminBrand = {
   name: string
   logo: string | null
   active: boolean
+  productCount: number
+}
+
+// Una categoría es el texto que llevan los productos en `category`, cruzado
+// por `value` (su forma canónica). `line` es su sección de la portada.
+export type AdminCategory = {
+  id: number
+  name: string
+  value: string
+  line: ProductLineValue
   productCount: number
 }
 

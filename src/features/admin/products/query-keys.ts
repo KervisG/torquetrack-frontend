@@ -3,4 +3,5 @@ export const adminProductKeys = {
   list: () => [...adminProductKeys.all, 'list'] as const,
   applications: () => [...adminProductKeys.all, 'applications'] as const,
   brands: () => [...adminProductKeys.all, 'brands'] as const,
+  categories: () => [...adminProductKeys.all, 'categories'] as const,
 }

@@ -1,7 +1,15 @@
 import { ApiError, apiRequest } from '@/lib/api-client'
 import { optionalNumber, type AdminProductValues } from '@/lib/validators/admin-product'
 
-import type { AdminApplication, AdminBrand, AdminProduct, AdminProductImage } from './types'
+import type { ProductLineValue } from '@/lib/product-lines'
+
+import type {
+  AdminApplication,
+  AdminBrand,
+  AdminCategory,
+  AdminProduct,
+  AdminProductImage,
+} from './types'
 
 function num(value: unknown): number | undefined {
   const parsed = Number(value)
@@ -110,16 +118,26 @@ export function listAdminApplications(): Promise<AdminApplication[]> {
   return apiRequest<AdminApplication[]>('/admin/applications')
 }
 
-export function deactivateAdminProduct(id: string): Promise<{ ok: true }> {
-  return apiRequest(`/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
+// Suspende o reactiva: el PATCH solo cambia `active`, el resto del registro queda.
+function setAdminProductActive(id: string, active: boolean): Promise<{ ok: true }> {
+  return apiRequest(`/admin/products/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ active }),
+  })
 }
 
-// Solo `active`: el backend conserva precio y el resto del registro guardado.
+export function deactivateAdminProduct(id: string): Promise<{ ok: true }> {
+  return setAdminProductActive(id, false)
+}
+
 export function activateAdminProduct(id: string): Promise<{ ok: true }> {
-  return apiRequest(`/admin/products/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    body: JSON.stringify({ active: true }),
-  })
+  return setAdminProductActive(id, true)
+}
+
+// Borrado definitivo: se lleva el fitment y las fotos. Los pedidos y las
+// cotizaciones conservan su copia del título y el precio.
+export function deleteAdminProduct(id: string): Promise<{ ok: true }> {
+  return apiRequest(`/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
 type BrandResponse = { ok: true; brand: AdminBrand }
@@ -160,6 +178,35 @@ export async function deleteBrandLogo(id: number): Promise<AdminBrand> {
     method: 'DELETE',
   })
   return response.brand
+}
+
+type CategoryResponse = { ok: true; category: AdminCategory }
+
+export function listAdminCategories(): Promise<AdminCategory[]> {
+  return apiRequest<AdminCategory[]>('/admin/categories')
+}
+
+export async function createAdminCategory(
+  name: string,
+  line: ProductLineValue,
+): Promise<AdminCategory> {
+  const response = await apiRequest<CategoryResponse>('/admin/categories', {
+    method: 'POST',
+    body: JSON.stringify({ name, line }),
+  })
+  return response.category
+}
+
+// Mueve la categoría a otra sección de la portada.
+export async function setAdminCategoryLine(
+  id: number,
+  line: ProductLineValue,
+): Promise<AdminCategory> {
+  const response = await apiRequest<CategoryResponse>(`/admin/categories/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ line }),
+  })
+  return response.category
 }
 
 const EXPORT_FALLBACK_FILE_NAME = 'torquetrack-catalog.zip'
