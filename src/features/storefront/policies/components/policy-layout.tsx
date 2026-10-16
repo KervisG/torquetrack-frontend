@@ -35,9 +35,7 @@ export function PolicyLayout({ title, intro, children }: PolicyLayoutProps) {
           <PolicySection title="Contact Us">
             <p>
               Questions about this policy? Call us at{' '}
-              <a className="text-sky-900 hover:underline" href={STORE_PHONE.href}>
-                {STORE_PHONE.display}
-              </a>{' '}
+              <span className="font-medium text-foreground">{STORE_PHONE.display}</span>{' '}
               or email{' '}
               <a className="text-sky-900 hover:underline" href={`mailto:${STORE_EMAIL}`}>
                 {STORE_EMAIL}

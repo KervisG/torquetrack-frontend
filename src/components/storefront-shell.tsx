@@ -1,13 +1,15 @@
-import { Phone, ShoppingCart } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 
 import { BrandMark } from '@/components/brand-mark'
 import { CartPriceNotices } from '@/components/cart-price-notices'
 import { CartQuantityLimit } from '@/components/cart-quantity-limit'
+import { ContactMenu } from '@/components/contact-menu'
 import { StorefrontAccountMenu } from '@/components/storefront-account-menu'
 import { StorefrontButton } from '@/components/storefront-button'
 import { Badge } from '@/components/ui/badge'
+import { WhatsAppButton } from '@/components/whatsapp-button'
 import {
   Sheet,
   SheetContent,
@@ -71,10 +73,7 @@ export function StorefrontShell() {
             <Link to="/shop" className={navLink}>
               Shop
             </Link>
-            <a href={STORE_PHONE.href} className={`${navLink} inline-flex items-center`} aria-label={`Call ${STORE_PHONE.display}`}>
-              <Phone className="inline size-4 sm:mr-1.5" />
-              <span className="max-sm:hidden">{STORE_PHONE.display}</span>
-            </a>
+            <ContactMenu triggerClassName={`${navLink} inline-flex items-center gap-1.5`} />
             <VehicleHeaderButton />
             <AccountNav />
             <StorefrontButton
@@ -100,9 +99,7 @@ export function StorefrontShell() {
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="font-semibold">TorqueTrack Diesel</p>
-            <a className="mt-2 block text-sm text-sky-900 hover:underline" href={STORE_PHONE.href}>
-              {STORE_PHONE.display}
-            </a>
+            <p className="mt-2 text-sm">{STORE_PHONE.display}</p>
             <a className="mt-2 block text-sm text-sky-900 hover:underline" href={`mailto:${STORE_EMAIL}`}>
               {STORE_EMAIL}
             </a>
@@ -135,6 +132,7 @@ export function StorefrontShell() {
         </div>
       </footer>
       <VehicleSelectorDialog />
+      <WhatsAppButton />
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
           <SheetHeader>

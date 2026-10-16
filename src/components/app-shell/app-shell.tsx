@@ -1,11 +1,22 @@
-import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import {
+  ChevronRight,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ShoppingBag,
+  ShoppingCart,
+  Store,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, matchPath, useLocation } from 'react-router-dom'
 
 import { BrandMark } from '@/components/brand-mark'
+import { ContactMenu } from '@/components/contact-menu'
 import { FormError } from '@/components/form-error'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { WhatsAppButton } from '@/components/whatsapp-button'
 import { cn } from '@/lib/utils'
+import { useCartStore } from '@/stores/cart-store'
 
 import { SidebarNav, type ShellNavGroup, type ShellNavItem } from './sidebar-nav'
 import { useSidebarCollapsed } from './use-sidebar-collapsed'
@@ -109,7 +120,8 @@ export function AppShell({
               </SheetContent>
             </Sheet>
             <Breadcrumb current={current} pathname={pathname} />
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-2">
+              <StoreNav />
               <UserMenu user={user} onSignOut={onSignOut} signingOut={signingOut} />
             </div>
           </div>
@@ -128,6 +140,7 @@ export function AppShell({
           {children}
         </main>
       </div>
+      <WhatsAppButton />
     </div>
   )
 }
@@ -162,6 +175,50 @@ function Brand({
     </div>
   )
 }
+
+// Accesos a la tienda siempre visibles en el header: botones grandes con texto
+// para que usuarios mayores no tengan que buscarlos dentro del menú de cuenta.
+// En móvil los cuatro quedan como íconos cuadrados de 40px (con aria-label)
+// para que entren junto al menú de cuenta; desde `sm` muestran el texto.
+function StoreNav() {
+  const count = useCartStore((state) => state.items.reduce((sum, item) => sum + item.qty, 0))
+  const setDrawerOpen = useCartStore((state) => state.setDrawerOpen)
+
+  return (
+    <nav aria-label="Store" className="flex items-center gap-1.5 sm:gap-2">
+      <Link to="/" aria-label="Store" className={cn(storeNavItem, 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90')}>
+        <Store className="size-5 shrink-0" aria-hidden="true" />
+        <span className="max-sm:hidden">Store</span>
+      </Link>
+      <Link to="/shop" aria-label="Shop parts" className={cn(storeNavItem, 'border hover:bg-secondary')}>
+        <ShoppingBag className="size-5 shrink-0" aria-hidden="true" />
+        <span className="max-sm:hidden">Shop parts</span>
+      </Link>
+      <ContactMenu triggerClassName={cn(storeNavItem, 'border hover:bg-secondary')} />
+      {/* El carrito se muestra en el cajón de la tienda: se abre al llegar. */}
+      <Link
+        to="/shop"
+        aria-label={count > 0 ? `Cart, ${count} ${count === 1 ? 'part' : 'parts'}` : 'Cart'}
+        onClick={() => setDrawerOpen(true)}
+        className={cn(storeNavItem, 'relative border hover:bg-secondary')}
+      >
+        <ShoppingCart className="size-5 shrink-0" aria-hidden="true" />
+        <span className="max-sm:hidden">Cart</span>
+        {count > 0 ? (
+          <span
+            aria-hidden="true"
+            className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-xs font-bold text-neutral-950 max-sm:absolute max-sm:-right-1.5 max-sm:-top-1.5"
+          >
+            {count}
+          </span>
+        ) : null}
+      </Link>
+    </nav>
+  )
+}
+
+const storeNavItem =
+  'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 max-sm:w-10 sm:px-4'
 
 type CurrentSection = { group: string; item: ShellNavItem }
 
