@@ -27,7 +27,7 @@ function initials(name: string): string {
 }
 
 const itemClass =
-  'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none disabled:opacity-50'
+  'flex w-full items-center gap-2 rounded-sm px-3 py-2.5 text-base hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none disabled:opacity-50'
 
 // Patrón de disclosure (no `role="menu"`): los enlaces y botones del panel se
 // recorren con Tab como cualquier otro control.
@@ -68,12 +68,17 @@ export function UserMenu({ user, onSignOut, signingOut }: UserMenuProps) {
             </Badge>
           </div>
           <div className="my-1 h-px bg-border" />
-          <Link to="/" className={itemClass} onClick={close}>
-            <Store className="size-4" aria-hidden="true" />
+          {/* Acción principal destacada: botón grande y con color para que sea fácil de encontrar */}
+          <Link
+            to="/"
+            onClick={close}
+            className="my-1 flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Store className="size-5" aria-hidden="true" />
             Back to store
           </Link>
           <button type="button" className={itemClass} onClick={onSignOut} disabled={signingOut}>
-            <LogOut className="size-4" aria-hidden="true" />
+            <LogOut className="size-5" aria-hidden="true" />
             Sign out
           </button>
         </div>
