@@ -85,6 +85,15 @@ export function shippingMethodLabel(code: string): string {
   return SHIPPING_METHOD_LABELS[code] ?? ''
 }
 
+// Nota interna del pedido: solo la ve el staff. `by` es el email de quien la
+// escribió.
+export type OrderNote = {
+  id: string
+  body: string
+  by: string
+  at: Date
+}
+
 export type AdminOrder = {
   id: string
   number: string
@@ -114,6 +123,7 @@ export type AdminOrder = {
   trackingUrl: string | null
   shippedAt: Date | null
   deliveredAt: Date | null
+  internalNotes: OrderNote[]
 }
 
 // Misma regla que `update_order_fulfillment`: solo avanza un pedido cobrado

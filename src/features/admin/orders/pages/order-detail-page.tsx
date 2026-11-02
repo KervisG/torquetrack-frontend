@@ -15,6 +15,7 @@ import { formatMoney } from '@/lib/money'
 import { listOrders } from '../api'
 import { CustomerDetails } from '../components/customer-details'
 import { FulfillmentPanel } from '../components/fulfillment-panel'
+import { OrderNotesPanel } from '../components/order-notes-panel'
 import { OrderStatusForm } from '../components/order-status-form'
 import { OrderWizard } from '../components/order-wizard'
 import { PaymentActions } from '../components/payment-actions'
@@ -204,6 +205,13 @@ export function OrderDetailPage() {
           },
         ]}
       />
+      <Section title="Internal notes">
+        <OrderNotesPanel
+          orderId={order.id}
+          notes={order.internalNotes}
+          canAdd={canChangeStatus}
+        />
+      </Section>
     </section>
   )
 }

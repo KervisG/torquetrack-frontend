@@ -7,6 +7,7 @@ import {
   shippingMethodLabel,
   type AdminOrder,
   type OrderCustomer,
+  type OrderNote,
   type OrderRefund,
   type ShippingMethod,
 } from './types'
@@ -42,6 +43,13 @@ type RawOrder = {
   trackingUrl?: string | null
   shippedAt?: string | null
   deliveredAt?: string | null
+  internalNotes?: RawOrderNote[]
+}
+
+type RawOrderNote = Omit<OrderNote, 'at'> & { at: string }
+
+function toOrderNote(row: RawOrderNote): OrderNote {
+  return { ...row, at: new Date(row.at) }
 }
 
 type RawRefund = Omit<OrderRefund, 'createdAt'> & { createdAt: string }
@@ -138,6 +146,7 @@ function toOrder(row: RawOrder): AdminOrder {
     trackingUrl: row.trackingUrl ?? null,
     shippedAt: optionalDate(row.shippedAt),
     deliveredAt: optionalDate(row.deliveredAt),
+    internalNotes: (row.internalNotes ?? []).map(toOrderNote),
   }
 }
 
@@ -209,4 +218,13 @@ export function updateFulfillment(
     `/admin/orders/${encodeURIComponent(id)}/fulfillment`,
     { method: 'POST', body: JSON.stringify(body) },
   )
+}
+
+// Las notas son de solo agregar: el backend guarda autor y fecha.
+export async function addOrderNote(id: string, body: string): Promise<OrderNote> {
+  const { note } = await apiRequest<{ note: RawOrderNote }>(
+    `/admin/orders/${encodeURIComponent(id)}/notes`,
+    { method: 'POST', body: JSON.stringify({ body }) },
+  )
+  return toOrderNote(note)
 }
