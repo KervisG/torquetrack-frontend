@@ -14,7 +14,6 @@ import { BrandMark } from '@/components/brand-mark'
 import { ContactMenu } from '@/components/contact-menu'
 import { FormError } from '@/components/form-error'
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
-import { WhatsAppButton } from '@/components/whatsapp-button'
 import { cn } from '@/lib/utils'
 import { useCartStore } from '@/stores/cart-store'
 
@@ -140,7 +139,6 @@ export function AppShell({
           {children}
         </main>
       </div>
-      <WhatsAppButton />
     </div>
   )
 }

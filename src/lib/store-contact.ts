@@ -6,10 +6,4 @@ export const STORE_PHONE = {
   display: '(786) 269-7237',
 }
 
-// Mismo número que el teléfono; wa.me exige el número sin "+" ni separadores.
-export const STORE_WHATSAPP = {
-  display: '+1 (786) 269-7237',
-  href: 'https://wa.me/17862697237',
-}
-
 export const STORE_EMAIL = 'torquetrackllc@gmail.com'

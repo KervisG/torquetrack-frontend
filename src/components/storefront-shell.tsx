@@ -9,7 +9,6 @@ import { ContactMenu } from '@/components/contact-menu'
 import { StorefrontAccountMenu } from '@/components/storefront-account-menu'
 import { StorefrontButton } from '@/components/storefront-button'
 import { Badge } from '@/components/ui/badge'
-import { WhatsAppButton } from '@/components/whatsapp-button'
 import {
   Sheet,
   SheetContent,
@@ -132,7 +131,6 @@ export function StorefrontShell() {
         </div>
       </footer>
       <VehicleSelectorDialog />
-      <WhatsAppButton />
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="right" className="flex w-full flex-col sm:max-w-md">
           <SheetHeader>
