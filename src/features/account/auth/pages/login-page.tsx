@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { PasswordField } from '@/components/password-field'
 import { Button } from '@/components/ui/button'
 import { loginSchema, type LoginValues } from '@/lib/validators/login'
 
@@ -46,10 +47,9 @@ export function LoginPage() {
           error={form.formState.errors.email?.message}
           {...form.register('email')}
         />
-        <FormField
+        <PasswordField
           id="password"
           label="Password"
-          type="password"
           autoComplete="current-password"
           error={form.formState.errors.password?.message}
           {...form.register('password')}

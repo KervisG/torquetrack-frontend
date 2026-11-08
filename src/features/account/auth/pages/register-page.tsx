@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { PasswordField } from '@/components/password-field'
 import { Button } from '@/components/ui/button'
 import { registerSchema, type RegisterValues } from '@/lib/validators/register'
 
@@ -81,18 +82,16 @@ export function RegisterPage() {
             error={errors.email?.message}
             {...form.register('email')}
           />
-          <FormField
+          <PasswordField
             id="password"
             label="Password"
-            type="password"
             autoComplete="new-password"
             error={errors.password?.message}
             {...form.register('password')}
           />
-          <FormField
+          <PasswordField
             id="confirmPassword"
             label="Confirm password"
-            type="password"
             autoComplete="new-password"
             error={errors.confirmPassword?.message}
             {...form.register('confirmPassword')}

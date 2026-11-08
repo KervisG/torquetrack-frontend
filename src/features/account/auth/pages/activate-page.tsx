@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
-import { FormField } from '@/components/form-field'
+import { PasswordField } from '@/components/password-field'
 import { Button } from '@/components/ui/button'
 import { newPasswordSchema, type NewPasswordValues } from '@/lib/validators/new-password'
 
@@ -33,18 +33,16 @@ export function ActivatePage() {
           noValidate
           onSubmit={form.handleSubmit(({ password }) => activate.mutate({ token, password }))}
         >
-          <FormField
+          <PasswordField
             id="password"
             label="Password"
-            type="password"
             autoComplete="new-password"
             error={form.formState.errors.password?.message}
             {...form.register('password')}
           />
-          <FormField
+          <PasswordField
             id="confirmPassword"
             label="Confirm password"
-            type="password"
             autoComplete="new-password"
             error={form.formState.errors.confirmPassword?.message}
             {...form.register('confirmPassword')}

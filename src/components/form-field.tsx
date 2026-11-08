@@ -10,6 +10,7 @@ type FormFieldProps = ComponentProps<typeof Input> & {
   error?: string
   hint?: ReactNode
   action?: ReactNode
+  trailing?: ReactNode
 }
 
 export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function FormField(
@@ -20,6 +21,7 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function F
     error,
     hint,
     action,
+    trailing,
     className,
     'aria-invalid': ariaInvalid,
     'aria-describedby': ariaDescribedBy,
@@ -31,15 +33,24 @@ export const FormField = forwardRef<HTMLInputElement, FormFieldProps>(function F
   // de pantalla lee el mensaje al enfocarlo.
   const errorId = error && id ? `${id}-error` : undefined
   const describedBy = [ariaDescribedBy, errorId].filter(Boolean).join(' ') || undefined
-  const input = (
+  const field = (
     <Input
       id={id}
       ref={ref}
       aria-invalid={error ? true : ariaInvalid}
       aria-describedby={describedBy}
-      className={cn(error && 'border-destructive focus-visible:ring-destructive', className)}
+      className={cn(error && 'border-destructive focus-visible:ring-destructive', trailing && 'pr-10', className)}
       {...props}
     />
+  )
+  // `trailing` va dentro del campo, alineado a la derecha (por ejemplo, el ojo de la contraseña).
+  const input = trailing ? (
+    <div className="relative">
+      {field}
+      <div className="absolute inset-y-0 right-0 flex items-center pr-1">{trailing}</div>
+    </div>
+  ) : (
+    field
   )
 
   return (
