@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
@@ -97,6 +97,7 @@ export function CatalogPage() {
     // Al cambiar un filtro o de página se sigue viendo la lista anterior.
     placeholderData: keepPreviousData,
   })
+  const queryClient = useQueryClient()
 
   // Los filtros cambian la lista, no la página: el canonical sigue siendo `/shop`.
   usePageMeta({
@@ -135,6 +136,22 @@ export function CatalogPage() {
   const pageRows = products.data?.results ?? []
   const pageCount = products.data?.pageCount ?? 1
   const safePage = products.data?.page ?? currentPage
+  // Mientras llega la página nueva se sigue viendo la anterior, atenuada.
+  const switching = products.isPlaceholderData
+
+  // La página siguiente se pide de antemano: "Next" se siente inmediato.
+  const nextSearch =
+    !switching && products.data && safePage < pageCount ? { ...search, page: safePage + 1 } : null
+  const nextSearchKey = nextSearch ? JSON.stringify(catalogKeys.search(nextSearch)) : ''
+  useEffect(() => {
+    if (!nextSearch) return
+    void queryClient.prefetchQuery({
+      queryKey: catalogKeys.search(nextSearch),
+      queryFn: ({ signal }) => searchProducts(nextSearch, signal),
+    })
+    // `nextSearchKey` resume `nextSearch`, que es un objeto nuevo en cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextSearchKey, queryClient])
 
   // Cambiar un filtro vuelve a la primera página. Lo que se tipea o se
   // arrastra reemplaza la entrada del historial en lugar de sumar una por tecla.
@@ -158,9 +175,11 @@ export function CatalogPage() {
 
   function goToPage(next: number) {
     updateParams({ page: next > 1 ? String(next) : null }, { keepPage: true })
-    // jsdom no implementa el desplazamiento; en el navegador sube al listado.
+    // jsdom no implementa el desplazamiento; en el navegador sube al listado
+    // con un desplazamiento suave, salvo que el comprador pida menos movimiento.
     try {
-      resultsRef.current?.scrollIntoView({ block: 'start' })
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      resultsRef.current?.scrollIntoView({ block: 'start', behavior: reduced ? 'auto' : 'smooth' })
     } catch {
       // Sin desplazamiento el cambio de página igual se ve.
     }
@@ -289,7 +308,15 @@ export function CatalogPage() {
           <aside className="w-72 shrink-0 space-y-6 lg:sticky lg:top-20">{filters}</aside>
         ) : null}
 
-        <section ref={resultsRef} className="min-w-0 flex-1 scroll-mt-20">
+        <section ref={resultsRef} aria-busy={switching} className="relative min-w-0 flex-1 scroll-mt-20">
+          {switching ? (
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-0 -top-2 h-0.5 overflow-hidden rounded-full bg-amber-100"
+            >
+              <div className="h-full w-1/3 animate-[catalog-progress_1s_ease-in-out_infinite] rounded-full bg-amber-500 motion-reduce:animate-none" />
+            </div>
+          ) : null}
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               {products.isPending ? (
@@ -350,20 +377,31 @@ export function CatalogPage() {
           ) : products.isError ? null : total === 0 ? (
             <p className="text-sm text-muted-foreground">No parts match these filters.</p>
           ) : (
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {pageRows.map((product) => (
-                <li key={product.id} className="flex h-full flex-col overflow-hidden rounded-md border bg-background">
+            // La lista se vuelve a montar cuando cambian los productos: así las
+            // tarjetas nuevas entran con su animación y no aparecen de golpe.
+            <ul
+              key={pageRows.map((product) => product.id).join('|')}
+              className={`grid grid-cols-1 gap-4 transition-opacity duration-200 sm:grid-cols-2 lg:grid-cols-4 ${
+                switching ? 'pointer-events-none opacity-50' : 'opacity-100'
+              }`}
+            >
+              {pageRows.map((product, index) => (
+                <li
+                  key={product.id}
+                  style={{ animationDelay: `${Math.min(index, 15) * 30}ms` }}
+                  className="group flex h-full flex-col overflow-hidden rounded-md border bg-background transition duration-200 ease-out animate-in fade-in slide-in-from-bottom-2 fill-mode-both hover:-translate-y-1 hover:border-amber-300 hover:shadow-lg motion-reduce:animate-none motion-reduce:hover:translate-y-0"
+                >
                   <Link
                     to={productPath(product)}
                     state={returnState}
-                    className="block h-40 bg-neutral-200"
+                    className="block h-44 overflow-hidden border-b bg-white p-3"
                   >
                     <ProductPhoto
                       src={product.image}
                       partNumber={product.partNumber}
                       category={product.category}
                       brand={product.manufacturer}
-                      className="h-full w-full object-contain"
+                      className="h-full w-full object-contain transition-transform duration-300 ease-out group-hover:scale-105 motion-reduce:group-hover:scale-100"
                     />
                   </Link>
                   <div className="flex flex-1 flex-col p-4">
@@ -380,7 +418,7 @@ export function CatalogPage() {
                     <Link
                       to={productPath(product)}
                       state={returnState}
-                      className="line-clamp-2 text-sm font-medium text-sky-900 hover:text-amber-700 hover:underline"
+                      className="line-clamp-2 text-sm font-medium text-sky-900 transition-colors group-hover:text-amber-700 hover:underline"
                     >
                       {product.title}
                     </Link>

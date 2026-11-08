@@ -32,3 +32,13 @@
 body {
   @apply bg-background text-foreground;
 }
+
+/* Barra de progreso del listado mientras llega la página siguiente. */
+@keyframes catalog-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}

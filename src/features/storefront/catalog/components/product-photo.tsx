@@ -1,4 +1,5 @@
 import { Package } from 'lucide-react'
+import { useState } from 'react'
 
 import { categoryLabel } from '../filter-products'
 
@@ -28,7 +29,7 @@ export function ProductPhoto({
   size = 'compact',
 }: ProductPhotoProps) {
   if (!isPlaceholder(src)) {
-    return <img src={src} alt="" className={className ?? 'h-full w-full object-contain'} />
+    return <LazyPhoto key={src} src={src as string} className={className} />
   }
 
   const hint = [category ? categoryLabel(category) : '', brand?.trim() ?? '']
@@ -67,5 +68,33 @@ export function ProductPhoto({
       ) : null}
       <p className="text-[11px] uppercase tracking-wider text-neutral-400">Photo coming soon</p>
     </div>
+  )
+}
+
+// La foto se descarga cuando está por entrar en pantalla y aparece con un
+// fundido. Mientras tanto se ve un fondo de carga del mismo tamaño.
+function LazyPhoto({ src, className }: { src: string; className?: string }) {
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <span className="relative block h-full w-full">
+      {loaded ? null : (
+        <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-neutral-200" />
+      )}
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        // Una foto ya en caché puede terminar antes de montar el manejador.
+        ref={(node) => {
+          if (node?.complete && node.naturalWidth > 0) setLoaded(true)
+        }}
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        className={`relative transition-opacity duration-300 ease-out ${
+          loaded ? 'opacity-100' : 'opacity-0'
+        } ${className ?? 'h-full w-full object-contain'}`}
+      />
+    </span>
   )
 }
