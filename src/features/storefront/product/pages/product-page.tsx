@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { CircleAlert, CircleCheck, CircleHelp, Truck } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 
@@ -26,6 +26,8 @@ import { formatMoney, hasListedPrice } from '@/lib/money'
 import { SITE_NAME, usePageMeta } from '@/lib/page-meta'
 import { useCartStore } from '@/stores/cart-store'
 import { describeVehicle, useVehicleStore, type SavedVehicle } from '@/stores/vehicle-store'
+
+import { SpecLabel, type SpecIconName } from '../components/spec-icons'
 
 export function ProductPage() {
   // El segmento puede ser el slug o el id: el backend resuelve los dos.
@@ -83,7 +85,8 @@ export function ProductPage() {
 
   return (
     // La ficha de compra va en su columna y se queda fija al bajar.
-    <main className="mx-auto grid max-w-7xl items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.15fr)_18rem]">
+    // En pantallas anchas el contenedor crece para no dejar los costados vacíos.
+    <main className="mx-auto grid max-w-[1600px] items-start gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1.15fr)_18rem] lg:px-6 2xl:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_20rem] 2xl:gap-8">
       <ProductSeo product={item} />
       <ProductGallery product={item} />
       <div>
@@ -99,43 +102,47 @@ export function ProductPage() {
         <FitBadge product={item} />
         <KeyFacts product={item} />
         {isEmissionsCategory(item.category) ? <EmissionsNotice /> : null}
-        <div className="mt-8 space-y-8">
+        {/* En pantallas anchas los bloques cortos van de a dos. */}
+        <div className="mt-8 grid gap-8 2xl:grid-cols-2">
           <DetailGrid
+            id={COMPATIBILITY_ID}
+            className="2xl:col-span-2"
             title="Compatibility"
             note={item.fitment}
             rows={[
-              { label: 'Years', value: yearRange(item.yearFrom, item.yearTo) },
-              { label: 'Make', value: item.make },
-              { label: 'Model', value: item.model },
-              { label: 'Engine', value: item.engine },
-              { label: 'Engine family', value: item.engineFamily },
-              { label: 'Engine code', value: item.engineCode },
+              { label: 'Years', icon: 'years', value: yearRange(item.yearFrom, item.yearTo) },
+              { label: 'Make', icon: 'make', value: item.make },
+              { label: 'Model', icon: 'model', value: item.model },
+              { label: 'Engine', icon: 'engine', value: item.engine },
+              { label: 'Engine family', icon: 'engineFamily', value: item.engineFamily },
+              { label: 'Engine code', icon: 'engineCode', value: item.engineCode },
             ]}
           />
           <DetailGrid
             title="Part numbers"
             rows={[
-              { label: 'Part #', value: item.partNumber },
-              { label: 'OEM', value: item.oemPart },
-              { label: 'Aftermarket', value: aftermarket },
-              { label: 'Reman', value: item.remanPart },
+              { label: 'Part #', icon: 'part', value: item.partNumber },
+              { label: 'OEM', icon: 'part', value: item.oemPart },
+              { label: 'Aftermarket', icon: 'part', value: aftermarket },
+              { label: 'Reman', icon: 'reman', value: item.remanPart },
             ]}
           />
           <DetailGrid
             title="Details"
             rows={[
-              { label: 'Manufacturer', value: item.manufacturer },
-              { label: 'Type', value: item.type },
-              { label: 'Fuel', value: item.fuelType },
+              { label: 'Manufacturer', icon: 'manufacturer', value: item.manufacturer },
+              { label: 'Type', icon: 'type', value: item.type },
+              { label: 'Fuel', icon: 'fuel', value: item.fuelType },
               {
                 label: 'Shipping weight',
+                icon: 'weight',
                 value: hasListedPrice(item.shippingWeight) ? `${item.shippingWeight} lb` : '',
               },
-              { label: 'Warranty', value: item.warranty },
+              { label: 'Warranty', icon: 'warranty', value: item.warranty },
             ]}
           />
           {item.description?.trim() ? (
-            <section>
+            <section className="2xl:col-span-2">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
                 Description
               </h2>
@@ -336,31 +343,113 @@ function KeyFacts({ product }: { product: Product }) {
       .filter(Boolean)
       .join(' ')
   const availability = product.stock?.trim()
-  const facts = [
-    { label: 'Condition', value: product.condition?.trim() },
-    { label: 'Availability', value: availability },
-    { label: 'Warranty', value: product.warranty?.trim() },
-    { label: 'Compatibility', value: compatibility },
-  ].filter((fact): fact is { label: string; value: string } => Boolean(fact.value))
-  if (!facts.length) return null
+  const facts: { label: string; icon: SpecIconName; value?: string }[] = [
+    { label: 'Condition', icon: 'condition', value: product.condition?.trim() },
+    { label: 'Availability', icon: 'availability', value: availability },
+    { label: 'Warranty', icon: 'warranty', value: product.warranty?.trim() },
+    { label: 'Compatibility', icon: 'model', value: compatibility },
+  ]
+  const visible = facts.filter((fact) => Boolean(fact.value))
+  if (!visible.length) return null
 
   const outOfStock = schemaAvailability(availability) === 'https://schema.org/OutOfStock'
   const availabilityClass = outOfStock ? 'text-red-700' : 'text-emerald-700'
   return (
     <dl className="mt-4 grid gap-2 sm:grid-cols-2">
-      {facts.map((fact) => (
-        <div key={fact.label} className="rounded-md border bg-white px-3 py-2">
-          <dt className="text-xs text-neutral-500">{fact.label}</dt>
-          <dd
-            className={`text-sm font-medium ${
-              fact.label === 'Availability' ? availabilityClass : 'text-neutral-900'
-            }`}
+      {visible.map((fact) => {
+        // Una compatibilidad larga (productos genéricos) no estira la ficha:
+        // arriba va un resumen y la lista completa queda en su sección.
+        const long = fact.label === 'Compatibility' && (fact.value?.length ?? 0) > LONG_FACT
+        return (
+          <div
+            key={fact.label}
+            className={`rounded-lg border bg-white px-3 py-2.5 ${long ? 'sm:col-span-2' : ''}`}
           >
-            {fact.value}
-          </dd>
-        </div>
-      ))}
+            <dt>
+              <SpecLabel icon={fact.icon}>{fact.label}</SpecLabel>
+            </dt>
+            <dd
+              className={`mt-1.5 text-sm ${
+                fact.label === 'Availability' ? `font-medium ${availabilityClass}` : 'text-neutral-900'
+              } ${long ? 'line-clamp-2' : ''}`}
+            >
+              {fact.value}
+            </dd>
+            {long ? (
+              <button
+                type="button"
+                className="mt-1 text-xs font-medium text-amber-800 underline underline-offset-4 hover:text-amber-950"
+                onClick={() => scrollToSection(COMPATIBILITY_ID)}
+              >
+                See full compatibility ({fitmentEntries(fact.value).length})
+              </button>
+            ) : null}
+          </div>
+        )
+      })}
     </dl>
+  )
+}
+
+// Ancho a partir del cual un dato deja de caber en su recuadro.
+const LONG_FACT = 70
+const COMPATIBILITY_ID = 'compatibility'
+
+function scrollToSection(id: string) {
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  document.getElementById(id)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+}
+
+// El fitment llega como texto libre separado por comas, punto y coma o saltos.
+function fitmentEntries(text?: string): string[] {
+  return (text ?? '')
+    .split(/[,;\n]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+const FITMENT_PREVIEW = 12
+
+// Lista completa de compatibilidad. Cada entrada va entera en su etiqueta
+// para que un número de parte nunca se corte en dos líneas.
+function FitmentList({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const entries = fitmentEntries(text)
+  if (entries.length < 4) {
+    return (
+      <p className="mt-2 rounded-xl bg-neutral-50 px-3 py-3 text-sm leading-6 text-neutral-700">
+        {text}
+      </p>
+    )
+  }
+  const shown = expanded ? entries : entries.slice(0, FITMENT_PREVIEW)
+  const hidden = entries.length - shown.length
+  return (
+    <div className="mt-3 rounded-xl bg-neutral-50 p-3">
+      <p className="text-xs font-semibold text-neutral-800">
+        Fits / interchange ({entries.length})
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-1.5">
+        {shown.map((entry, index) => (
+          <li
+            key={`${entry}-${index}`}
+            className="max-w-full rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs font-medium text-neutral-800"
+          >
+            {entry}
+          </li>
+        ))}
+      </ul>
+      {entries.length > FITMENT_PREVIEW ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          className="mt-3 text-xs font-medium text-amber-800 underline underline-offset-4 hover:text-amber-950"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? 'Show less' : `Show all (${hidden} more)`}
+        </button>
+      ) : null}
+    </div>
   )
 }
 
@@ -403,35 +492,40 @@ function Chip({ children }: { children: string }) {
 }
 
 function DetailGrid({
+  id,
+  className,
   title,
   rows,
   note,
 }: {
+  id?: string
+  className?: string
   title: string
-  rows: { label: string; value?: string }[]
+  rows: { label: string; icon?: SpecIconName; value?: string }[]
   note?: string
 }) {
   const visible = rows.filter((row) => row.value?.trim())
   const aside = note?.trim()
   if (!visible.length && !aside) return null
   return (
-    <section>
+    <section id={id} className={`scroll-mt-24 ${className ?? ''}`}>
       <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{title}</h2>
       {visible.length ? (
         <dl className="mt-3 grid grid-cols-2 gap-2">
           {visible.map((row) => (
-            <div key={row.label} className="rounded-xl bg-neutral-50 px-3 py-3">
-              <dt className="text-xs text-neutral-500">{row.label}</dt>
-              <dd className="mt-1 break-words text-sm font-medium text-neutral-950">{row.value}</dd>
+            <div
+              key={row.label}
+              className="rounded-xl border border-neutral-200/80 bg-white px-3 py-3 shadow-[0_1px_0_rgb(0_0_0/0.02)]"
+            >
+              <dt>
+                <SpecLabel icon={row.icon}>{row.label}</SpecLabel>
+              </dt>
+              <dd className="mt-2 break-words text-sm text-neutral-900">{row.value}</dd>
             </div>
           ))}
         </dl>
       ) : null}
-      {aside ? (
-        <p className="mt-2 rounded-xl bg-neutral-50 px-3 py-3 text-sm leading-6 text-neutral-600">
-          {aside}
-        </p>
-      ) : null}
+      {aside ? <FitmentList text={aside} /> : null}
     </section>
   )
 }
@@ -466,6 +560,20 @@ function schemaAvailability(stock?: string): string {
   return 'https://schema.org/InStock'
 }
 
+// Traduce el texto libre de la condición al vocabulario de schema.org. Un
+// listado que ofrece varias condiciones ("New / Reman options") no declara
+// ninguna: no se sabe cuál corresponde al precio publicado.
+function schemaCondition(text?: string): string | undefined {
+  const value = text?.trim() ?? ''
+  const conditions = [
+    /\bnew\b/i.test(value) ? 'https://schema.org/NewCondition' : '',
+    /reman|rebuilt|refurb/i.test(value) ? 'https://schema.org/RefurbishedCondition' : '',
+    /\bused\b/i.test(value) ? 'https://schema.org/UsedCondition' : '',
+    /damaged/i.test(value) ? 'https://schema.org/DamagedCondition' : '',
+  ].filter(Boolean)
+  return conditions.length === 1 ? conditions[0] : undefined
+}
+
 function ProductSeo({ product }: { product: Product }) {
   const path = productPath(product)
   const title = product.partNumber
@@ -481,6 +589,7 @@ function ProductSeo({ product }: { product: Product }) {
 
   const origin = window.location.origin
   const url = new URL(path, origin).toString()
+  const condition = schemaCondition(product.condition)
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -490,11 +599,7 @@ function ProductSeo({ product }: { product: Product }) {
     brand: product.manufacturer ? { '@type': 'Brand', name: product.manufacturer } : undefined,
     image: product.image ? new URL(product.image, origin).toString() : undefined,
     description: product.description?.trim() || undefined,
-    itemCondition: /reman|rebuilt|refurb/i.test(product.condition ?? '')
-      ? 'https://schema.org/RefurbishedCondition'
-      : /used/i.test(product.condition ?? '')
-        ? 'https://schema.org/UsedCondition'
-        : undefined,
+    itemCondition: condition,
     url,
     // Sin precio publicado ("Price on request") no hay oferta que declarar.
     offers: hasListedPrice(product.price)
@@ -503,6 +608,8 @@ function ProductSeo({ product }: { product: Product }) {
           price: Number(product.price).toFixed(2),
           priceCurrency: 'USD',
           availability: schemaAvailability(product.stock),
+          // Google lee el estado en la oferta para los listados de comercio.
+          itemCondition: condition,
           url,
         }
       : undefined,
