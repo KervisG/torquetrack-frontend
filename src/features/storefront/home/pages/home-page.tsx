@@ -138,12 +138,12 @@ export function HomePage() {
       <HomeHero />
 
       {lines.length ? (
-        <div className="mx-auto max-w-6xl space-y-6 px-4 py-10 md:py-14">
+        <div className="mx-auto max-w-[1600px] space-y-6 px-4 py-10 md:py-14 lg:px-6">
           {lines.map((line) => {
             const total = line.items.reduce((sum, item) => sum + item.count, 0)
             return (
               <section key={line.title} className="overflow-hidden rounded-xl border bg-background">
-                <div className="grid gap-8 p-6 md:grid-cols-[1fr_1.15fr] md:p-8">
+                <div className="grid gap-8 p-6 md:grid-cols-[1fr_1.15fr] md:p-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)] xl:gap-12">
                   <div className="flex flex-col">
                     <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
                       {partsLabel(total)}
@@ -171,7 +171,7 @@ export function HomePage() {
                   </div>
 
                   <nav aria-label={`${line.title} categories`}>
-                    <ul className="grid gap-3 sm:grid-cols-2">
+                    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {line.items.map((item) => (
                         <li key={item.value}>
                           <Link

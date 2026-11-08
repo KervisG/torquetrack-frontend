@@ -47,7 +47,7 @@ export function HomeHero() {
       </video>
       <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/55" />
-      <div className="relative mx-auto flex max-w-6xl flex-col justify-end px-4 pb-6 pt-24 md:min-h-[calc(70vh+4rem)] md:pb-12 md:pt-28">
+      <div className="relative mx-auto flex max-w-[1600px] flex-col justify-end px-4 lg:px-6 pb-6 pt-24 md:min-h-[calc(70vh+4rem)] md:pb-12 md:pt-28">
         <h1 className="max-w-xl text-3xl font-semibold tracking-tight sm:text-5xl">
           Find it. Price it.
           <br />

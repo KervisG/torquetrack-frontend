@@ -57,7 +57,7 @@ export function StorefrontShell() {
   return (
     <div className="min-h-screen bg-muted/40 text-foreground">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/85 text-white backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
+        <div className="flex h-16 items-center justify-between gap-3 px-4 lg:px-6">
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <BrandMark className="h-6 w-auto text-white" />
             <span className="leading-none">
@@ -95,7 +95,7 @@ export function StorefrontShell() {
       </header>
       <Outlet />
       <footer className="mt-12 border-t bg-background">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
           <div>
             <p className="font-semibold">TorqueTrack Diesel</p>
             <p className="mt-2 text-sm">{STORE_PHONE.display}</p>
