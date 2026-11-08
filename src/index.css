@@ -42,3 +42,14 @@ body {
     transform: translateX(300%);
   }
 }
+
+/* Tailwind v4 pinta `border` con el color del texto: sin esta base todos los
+   bordes salen casi negros en lugar del gris del sistema. */
+@layer base {
+  *,
+  ::before,
+  ::after,
+  ::backdrop {
+    border-color: hsl(var(--border));
+  }
+}
