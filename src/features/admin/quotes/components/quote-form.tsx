@@ -4,6 +4,7 @@ import { useFieldArray, useForm, useWatch, type FieldPath } from 'react-hook-for
 
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
+import { FormSectionNav, scrollToElement, type FormLayout } from '@/components/form-layout'
 import { StepIndicator, StepNav, StepPanel, useFormSteps } from '@/components/form-steps'
 import { SelectField } from '@/components/select-field'
 import { Button } from '@/components/ui/button'
@@ -39,17 +40,12 @@ type QuoteFormProps = {
   layout?: QuoteFormLayout
 }
 
-export type QuoteFormLayout = 'steps' | 'single'
+export type QuoteFormLayout = FormLayout
 
 const sectionId = (id: string) => `quote-section-${id}`
 
 function scrollToSection(id: string) {
-  // jsdom no implementa el desplazamiento.
-  try {
-    document.getElementById(sectionId(id))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  } catch {
-    // Sin desplazamiento la sección igual está en la página.
-  }
+  scrollToElement(sectionId(id))
 }
 
 const emptyLine = {
@@ -142,24 +138,11 @@ export function QuoteForm({
   return (
     <form aria-label="Quote" className="space-y-6" noValidate onSubmit={handleSubmit}>
       {single ? (
-        <nav
-          aria-label="Quote sections"
-          className="sticky top-0 z-10 -mx-6 -mt-4 flex flex-wrap gap-2 border-b bg-background/95 px-6 py-3 backdrop-blur"
-        >
-          {STEPS.filter((step) => step.id !== 'review').map((step, index) => (
-            <button
-              key={step.id}
-              type="button"
-              className="flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm transition-colors hover:bg-secondary"
-              onClick={() => scrollToSection(step.id)}
-            >
-              <span className="grid size-5 place-items-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700">
-                {index + 1}
-              </span>
-              {step.label}
-            </button>
-          ))}
-        </nav>
+        <FormSectionNav
+          label="Quote sections"
+          sections={STEPS.filter((step) => step.id !== 'review')}
+          onSelect={scrollToSection}
+        />
       ) : (
         <StepIndicator
           steps={STEPS}

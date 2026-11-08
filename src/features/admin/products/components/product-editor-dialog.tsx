@@ -3,6 +3,13 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Controller, useForm, type FieldPath } from 'react-hook-form'
 
 import { FormField } from '@/components/form-field'
+import {
+  FormLayoutSwitch,
+  FormSectionNav,
+  scrollToElement,
+  useFormLayout,
+  type FormLayout,
+} from '@/components/form-layout'
 import { StepIndicator, StepNav, StepPanel, useFormSteps } from '@/components/form-steps'
 import { useApiFieldError } from '@/components/use-api-field-error'
 import { Label } from '@/components/ui/label'
@@ -144,6 +151,16 @@ function stepOf(field: string): number {
   return STEPS.findIndex((step) => step.fields.some((name) => name === field))
 }
 
+const sectionId = (id: string) => `product-section-${id}`
+
+// Preferencia de cada navegador; sin elección previa se usa el modo por pasos.
+const LAYOUT_KEY = 'torquetrack.productFormLayout'
+
+const descriptions: Record<FormLayout, string> = {
+  steps: 'One step at a time: basics, fitment, pricing, shipping and photos.',
+  single: 'Every section on one page.',
+}
+
 type ProductEditorDialogProps = {
   product: AdminProduct | null
   open: boolean
@@ -218,15 +235,23 @@ export function ProductEditorDialog({
   // Un producto que ya existe se puede guardar desde cualquier paso.
   const editing = Boolean(product)
   const steps = useFormSteps(STEPS, { free: editing })
-  const goToStep = steps.goTo
+  const [storedLayout, chooseLayout] = useFormLayout(LAYOUT_KEY)
+  const layout = storedLayout ?? 'steps'
+  const single = layout === 'single'
+
+  // Lleva al paso (o a la sección, en el formulario completo) que tiene el error.
+  function revealStep(index: number) {
+    if (single) scrollToElement(sectionId(STEPS[index].id))
+    else steps.goTo(index)
+  }
+  const revealStepRef = useRef(revealStep)
+  revealStepRef.current = revealStep
 
   // Si el backend rechaza un campo, se abre el paso donde está.
   const rejectedField = error ? friendlyApiError(error).field : undefined
   useEffect(() => {
     const failed = rejectedField ? stepOf(rejectedField) : -1
-    if (failed >= 0) goToStep(failed)
-    // `goToStep` cambia en cada render; solo importa un error nuevo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (failed >= 0) revealStepRef.current(failed)
   }, [error, rejectedField])
 
   function handleOpenChange(next: boolean) {
@@ -255,13 +280,13 @@ export function ProductEditorDialog({
       }),
     (invalid) => {
       const failed = STEPS.findIndex((step) => step.fields.some((field) => field in invalid))
-      if (failed >= 0) steps.goTo(failed)
+      if (failed >= 0) revealStep(failed)
     },
   )
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (steps.isLast) {
+    if (single || steps.isLast) {
       await save()
       return
     }
@@ -289,16 +314,20 @@ export function ProductEditorDialog({
     const chosen = categories.find((category) => String(category.id) === option)
     form.setValue('category', chosen?.name ?? '', { shouldDirty: true })
   }
-  const at = (id: string) => STEPS[steps.current].id === id
+  // En el formulario completo se ven todas las secciones.
+  const show = (id: string) => single || STEPS[steps.current].id === id
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="h-[100dvh] max-w-none gap-0 overflow-hidden p-0 sm:h-[calc(100dvh-2rem)] sm:max-w-5xl">
         <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 pr-12">
-          <DialogTitle>{product ? 'Edit product' : 'New product'}</DialogTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <DialogTitle>{product ? 'Edit product' : 'New product'}</DialogTitle>
+            <FormLayoutSwitch value={layout} onChange={chooseLayout} />
+          </div>
           <DialogDescription>
-            One step at a time: basics, fitment, pricing, shipping and photos. Fields marked{' '}
-            <span className="text-destructive">*</span> are required.
+            {descriptions[layout]} Fields marked <span className="text-destructive">*</span> are
+            required.
           </DialogDescription>
         </DialogHeader>
         {/* El formulario envuelve el contenido y la barra de pasos: "Next" y
@@ -310,14 +339,22 @@ export function ProductEditorDialog({
           onSubmit={handleSubmit}
         >
           <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-4">
-            <StepIndicator
-              steps={STEPS}
-              current={steps.current}
-              reachable={steps.reachable}
-              onSelect={steps.goTo}
-            />
+            {single ? (
+              <FormSectionNav
+                label="Product sections"
+                sections={STEPS}
+                onSelect={(id) => scrollToElement(sectionId(id))}
+              />
+            ) : (
+              <StepIndicator
+                steps={STEPS}
+                current={steps.current}
+                reachable={steps.reachable}
+                onSelect={steps.goTo}
+              />
+            )}
 
-            <StepPanel active={at('basics')}>
+            <StepPanel id={sectionId('basics')} active={show('basics')}>
               <fieldset className="space-y-4">
                 <legend className="text-lg font-semibold">Basics</legend>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -428,7 +465,7 @@ export function ProductEditorDialog({
               </fieldset>
             </StepPanel>
 
-            <StepPanel active={at('fitment')}>
+            <StepPanel id={sectionId('fitment')} active={show('fitment')}>
               <fieldset className="space-y-4">
                 <legend className="text-lg font-semibold">Fitment</legend>
                 <div className="grid gap-4 sm:grid-cols-4">
@@ -463,7 +500,7 @@ export function ProductEditorDialog({
               </fieldset>
             </StepPanel>
 
-            <StepPanel active={at('pricing')}>
+            <StepPanel id={sectionId('pricing')} active={show('pricing')}>
               <fieldset className="space-y-4" disabled={!canEditPricing}>
                 <legend className="text-lg font-semibold">Pricing</legend>
                 {canEditPricing ? null : (
@@ -496,7 +533,7 @@ export function ProductEditorDialog({
               </fieldset>
             </StepPanel>
 
-            <StepPanel active={at('shipping')}>
+            <StepPanel id={sectionId('shipping')} active={show('shipping')}>
               <fieldset className="space-y-4">
                 <legend className="text-lg font-semibold">Shipping</legend>
                 <p className="text-sm text-muted-foreground">
@@ -543,7 +580,7 @@ export function ProductEditorDialog({
               </fieldset>
             </StepPanel>
 
-            <StepPanel active={at('photos')}>
+            <StepPanel id={sectionId('photos')} active={show('photos')}>
               <fieldset className="space-y-4">
                 <legend className="text-lg font-semibold">Photos</legend>
                 {product ? (
@@ -599,8 +636,8 @@ export function ProductEditorDialog({
           </div>
           <div className="shrink-0 border-t bg-background px-6 py-4">
             <StepNav
-              isFirst={steps.isFirst}
-              isLast={steps.isLast}
+              isFirst={single || steps.isFirst}
+              isLast={single || steps.isLast}
               submitting={submitting}
               saveLabel="Save product"
               saveAnytime={editing}

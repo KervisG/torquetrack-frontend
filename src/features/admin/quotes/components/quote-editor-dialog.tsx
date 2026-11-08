@@ -8,8 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { FormLayoutSwitch, useFormLayout } from '@/components/form-layout'
 import { useAdminPermissions } from '@/features/admin/auth/hooks/use-admin-permissions'
-import { cn } from '@/lib/utils'
 import type { AdminQuoteValues } from '@/lib/validators/admin-quote'
 
 import { useSaveQuote } from '../hooks/use-save-quote'
@@ -28,25 +28,8 @@ const newQuote: AdminQuoteValues = {
 }
 
 // Preferencia de cada navegador: se elige una vez y se cambia con el
-// interruptor del encabezado. El acceso puede fallar (modo privado).
+// interruptor del encabezado.
 const LAYOUT_KEY = 'torquetrack.quoteFormLayout'
-
-function readLayout(): QuoteFormLayout | null {
-  try {
-    const stored = window.localStorage.getItem(LAYOUT_KEY)
-    return stored === 'steps' || stored === 'single' ? stored : null
-  } catch {
-    return null
-  }
-}
-
-function storeLayout(layout: QuoteFormLayout) {
-  try {
-    window.localStorage.setItem(LAYOUT_KEY, layout)
-  } catch {
-    // Sin almacenamiento la elección vale solo para esta sesión.
-  }
-}
 
 const descriptions: Record<QuoteFormLayout, string> = {
   steps: 'One step at a time: customer, vehicle, items and shipping. Totals are calculated when you save.',
@@ -61,17 +44,12 @@ type QuoteEditorDialogProps = {
 export function QuoteEditorDialog({ open, onOpenChange }: QuoteEditorDialogProps) {
   const { can } = useAdminPermissions()
   const [dirty, setDirty] = useState(false)
-  const [layout, setLayout] = useState<QuoteFormLayout | null>(readLayout)
+  const [layout, chooseLayout] = useFormLayout(LAYOUT_KEY)
   const allowClose = useRef(false)
   const save = useSaveQuote(undefined, () => {
     allowClose.current = true
     onOpenChange(false)
   })
-
-  function chooseLayout(next: QuoteFormLayout) {
-    storeLayout(next)
-    setLayout(next)
-  }
 
   function handleOpenChange(next: boolean) {
     if (next) {
@@ -96,7 +74,7 @@ export function QuoteEditorDialog({ open, onOpenChange }: QuoteEditorDialogProps
         <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4 pr-12">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <DialogTitle>New quote</DialogTitle>
-            {layout ? <LayoutSwitch value={layout} onChange={chooseLayout} /> : null}
+            {layout ? <FormLayoutSwitch value={layout} onChange={chooseLayout} /> : null}
           </div>
           <DialogDescription>
             {layout ? descriptions[layout] : 'Choose how you want to fill in quotes.'}
@@ -124,42 +102,6 @@ export function QuoteEditorDialog({ open, onOpenChange }: QuoteEditorDialogProps
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-// Interruptor del encabezado entre los dos modos del formulario.
-function LayoutSwitch({
-  value,
-  onChange,
-}: {
-  value: QuoteFormLayout
-  onChange: (layout: QuoteFormLayout) => void
-}) {
-  const options: Array<{ value: QuoteFormLayout; label: string }> = [
-    { value: 'steps', label: 'Step by step' },
-    { value: 'single', label: 'Single form' },
-  ]
-  return (
-    <div role="radiogroup" aria-label="Form layout" className="flex rounded-full border bg-muted p-0.5">
-      {options.map((option) => {
-        const active = option.value === value
-        return (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            className={cn(
-              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
-              active ? 'bg-neutral-950 text-white shadow-sm' : 'text-neutral-600 hover:text-neutral-950',
-            )}
-            onClick={() => onChange(option.value)}
-          >
-            {option.label}
-          </button>
-        )
-      })}
-    </div>
   )
 }
 
