@@ -29,6 +29,7 @@ import { describeVehicle, useVehicleStore } from '@/stores/vehicle-store'
 
 import { searchProducts, type ProductSearch } from '../api'
 import { CategoryPicker } from '../components/category-picker'
+import { FiltersHelp } from '../components/filters-help'
 import { HouseBrandBadge } from '../components/house-brand-badge'
 import { PriceRange } from '../components/price-range'
 import { ProductPhoto } from '../components/product-photo'
@@ -193,6 +194,7 @@ export function CatalogPage() {
 
   const filters = (
     <>
+      <FiltersHelp />
       <FilterGroup title="My vehicle">
         {vehicle ? (
           <>
