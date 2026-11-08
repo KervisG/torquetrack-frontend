@@ -76,9 +76,18 @@ export function StepIndicator({ steps, current, reachable, onSelect }: StepIndic
 
 // El contenido de un paso. Los que no se ven siguen montados (`hidden`): el
 // formulario conserva lo escrito al ir y volver.
-export function StepPanel({ active, children }: { active: boolean; children: ReactNode }) {
+// `id` deja llegar a la sección cuando el formulario se muestra completo.
+export function StepPanel({
+  active,
+  id,
+  children,
+}: {
+  active: boolean
+  id?: string
+  children: ReactNode
+}) {
   return (
-    <div hidden={!active} className="space-y-8">
+    <div id={id} hidden={!active} className="scroll-mt-16 space-y-8">
       {children}
     </div>
   )

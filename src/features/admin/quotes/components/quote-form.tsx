@@ -35,6 +35,21 @@ type QuoteFormProps = {
   // El modal suma "Cancel" a la barra de pasos y avisa si hay cambios.
   onCancel?: () => void
   onDirtyChange?: (dirty: boolean) => void
+  // `single` muestra todas las secciones juntas con un solo "Save".
+  layout?: QuoteFormLayout
+}
+
+export type QuoteFormLayout = 'steps' | 'single'
+
+const sectionId = (id: string) => `quote-section-${id}`
+
+function scrollToSection(id: string) {
+  // jsdom no implementa el desplazamiento.
+  try {
+    document.getElementById(sectionId(id))?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } catch {
+    // Sin desplazamiento la sección igual está en la página.
+  }
 }
 
 const emptyLine = {
@@ -78,7 +93,9 @@ export function QuoteForm({
   editing = false,
   onCancel,
   onDirtyChange,
+  layout = 'steps',
 }: QuoteFormProps) {
+  const single = layout === 'single'
   const form = useForm<AdminQuoteValues>({
     resolver: zodResolver(adminQuoteSchema),
     defaultValues,
@@ -104,30 +121,55 @@ export function QuoteForm({
     const failed = STEPS.findIndex((step) =>
       step.fields.some((field) => field.split('.')[0] in invalid),
     )
-    if (failed >= 0) steps.goTo(failed)
+    if (failed < 0) return
+    if (single) scrollToSection(STEPS[failed].id)
+    else steps.goTo(failed)
   })
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (steps.isLast) {
+    if (single || steps.isLast) {
       await save()
       return
     }
     if (await form.trigger(STEPS[steps.current].fields)) steps.next()
   }
 
-  const at = (id: string) => STEPS[steps.current].id === id
+  // En el formulario completo se ve todo menos "Review": repetiría lo que ya
+  // está en pantalla.
+  const show = (id: string) => (single ? id !== 'review' : STEPS[steps.current].id === id)
 
   return (
     <form aria-label="Quote" className="space-y-6" noValidate onSubmit={handleSubmit}>
-      <StepIndicator
-        steps={STEPS}
-        current={steps.current}
-        reachable={steps.reachable}
-        onSelect={steps.goTo}
-      />
+      {single ? (
+        <nav
+          aria-label="Quote sections"
+          className="sticky top-0 z-10 -mx-6 -mt-4 flex flex-wrap gap-2 border-b bg-background/95 px-6 py-3 backdrop-blur"
+        >
+          {STEPS.filter((step) => step.id !== 'review').map((step, index) => (
+            <button
+              key={step.id}
+              type="button"
+              className="flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-sm transition-colors hover:bg-secondary"
+              onClick={() => scrollToSection(step.id)}
+            >
+              <span className="grid size-5 place-items-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-700">
+                {index + 1}
+              </span>
+              {step.label}
+            </button>
+          ))}
+        </nav>
+      ) : (
+        <StepIndicator
+          steps={STEPS}
+          current={steps.current}
+          reachable={steps.reachable}
+          onSelect={steps.goTo}
+        />
+      )}
 
-      <StepPanel active={at('customer')}>
+      <StepPanel id={sectionId('customer')} active={show('customer')}>
         <fieldset className="space-y-4">
           <legend className="text-lg font-semibold">Customer</legend>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -150,7 +192,7 @@ export function QuoteForm({
         </fieldset>
       </StepPanel>
 
-      <StepPanel active={at('vehicle')}>
+      <StepPanel id={sectionId('vehicle')} active={show('vehicle')}>
         <fieldset className="space-y-4">
           <legend className="text-lg font-semibold">Vehicle</legend>
           <div className="grid gap-4 sm:grid-cols-5">
@@ -193,7 +235,7 @@ export function QuoteForm({
         </fieldset>
       </StepPanel>
 
-      <StepPanel active={at('items')}>
+      <StepPanel id={sectionId('items')} active={show('items')}>
         <fieldset className="space-y-4">
           <legend className="text-lg font-semibold">Catalog</legend>
           <QuoteCatalogPicker
@@ -274,7 +316,7 @@ export function QuoteForm({
         </fieldset>
       </StepPanel>
 
-      <StepPanel active={at('shipping')}>
+      <StepPanel id={sectionId('shipping')} active={show('shipping')}>
         <fieldset className="space-y-4">
           <legend className="text-lg font-semibold">Ship to</legend>
           <div className="grid gap-4 sm:grid-cols-4">
@@ -332,7 +374,7 @@ export function QuoteForm({
         </fieldset>
       </StepPanel>
 
-      <StepPanel active={at('review')}>
+      <StepPanel id={sectionId('review')} active={show('review')}>
         <section aria-label="Review" className="space-y-4">
           <h3 className="text-lg font-semibold">Review</h3>
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
@@ -394,9 +436,10 @@ export function QuoteForm({
       </StepPanel>
 
       <FormError error={error} />
+      {/* Sin pasos no hay "Back" ni "Next": la barra queda con Cancel y Save. */}
       <StepNav
-        isFirst={steps.isFirst}
-        isLast={steps.isLast}
+        isFirst={single || steps.isFirst}
+        isLast={single || steps.isLast}
         submitting={submitting}
         saveLabel="Save quote"
         saveAnytime={editing}
