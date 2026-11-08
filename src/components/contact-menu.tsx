@@ -2,7 +2,7 @@ import { Mail, MessageCircle, Phone } from 'lucide-react'
 import { useId } from 'react'
 
 import { useDismissableMenu } from '@/components/use-dismissable-menu'
-import { STORE_EMAIL, STORE_PHONE } from '@/lib/store-contact'
+import { STORE_EMAIL, STORE_HOURS, STORE_PHONE } from '@/lib/store-contact'
 
 type ContactMenuProps = {
   triggerClassName: string
@@ -51,7 +51,7 @@ export function ContactMenu({ triggerClassName }: ContactMenuProps) {
               </a>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">Open 8:00 AM – 9:00 PM</p>
+          <p className="text-xs text-muted-foreground">{STORE_HOURS}</p>
         </div>
       ) : null}
     </div>

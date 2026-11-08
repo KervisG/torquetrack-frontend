@@ -1,4 +1,4 @@
-import { ShoppingCart } from 'lucide-react'
+import { Clock, Mail, Phone, ShoppingCart, UserRound } from 'lucide-react'
 import { useEffect } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 
@@ -24,7 +24,9 @@ import { VehicleHeaderButton } from '@/features/storefront/garage/components/veh
 import { VehicleSelectorDialog } from '@/features/storefront/garage/components/vehicle-selector-dialog'
 import { POLICY_PAGES } from '@/features/storefront/policies/policy-values'
 import { formatMoney } from '@/lib/money'
-import { STORE_EMAIL, STORE_PHONE } from '@/lib/store-contact'
+import { STORE_EMAIL, STORE_HOURS, STORE_PHONE } from '@/lib/store-contact'
+
+const footerHeading = 'text-sm font-semibold uppercase tracking-[0.14em] text-white'
 import { MAX_CART_QUANTITY, syncCartOwner, useCartStore } from '@/stores/cart-store'
 
 export function StorefrontShell() {
@@ -74,7 +76,6 @@ export function StorefrontShell() {
             </Link>
             <ContactMenu triggerClassName={`${navLink} inline-flex items-center gap-1.5`} />
             <VehicleHeaderButton />
-            <AccountNav />
             <StorefrontButton
               type="button"
               tone="outline"
@@ -90,44 +91,71 @@ export function StorefrontShell() {
                 </Badge>
               ) : null}
             </StorefrontButton>
+            {/* La cuenta siempre al final, a la derecha, separada de las acciones de compra. */}
+            <span aria-hidden="true" className="mx-1 hidden h-6 w-px bg-white/15 sm:block" />
+            <AccountNav />
           </nav>
         </div>
       </header>
       <Outlet />
-      <footer className="mt-12 border-t bg-background">
-        <div className="grid gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4 lg:px-6">
+      {/* Mismo tono que el header; el contenido va centrado con ancho máximo
+          para que no quede pegado al borde izquierdo en pantallas anchas. */}
+      <footer className="mt-12 bg-neutral-950 text-neutral-300">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
           <div>
-            <p className="font-semibold">TorqueTrack Diesel</p>
-            <p className="mt-2 text-sm">{STORE_PHONE.display}</p>
-            <a className="mt-2 block text-sm text-sky-900 hover:underline" href={`mailto:${STORE_EMAIL}`}>
-              {STORE_EMAIL}
-            </a>
-            <p className="mt-2 text-sm text-muted-foreground">Open 8:00 AM – 9:00 PM</p>
+            <Link to="/" className="inline-flex items-center gap-2.5 text-white">
+              <BrandMark className="h-6 w-auto text-white" />
+              <span className="leading-none">
+                <span className="block text-[13px] font-semibold tracking-[0.16em]">TORQUETRACK</span>
+                <span className="mt-1 block text-[10px] font-medium tracking-[0.32em] text-amber-400">
+                  DIESEL
+                </span>
+              </span>
+            </Link>
+            <ul className="mt-5 space-y-2.5 text-sm">
+              <li className="flex items-center gap-2">
+                <Phone className="size-4 text-amber-400" aria-hidden="true" />
+                {STORE_PHONE.display}
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail className="size-4 text-amber-400" aria-hidden="true" />
+                <a className="hover:text-white hover:underline" href={`mailto:${STORE_EMAIL}`}>
+                  {STORE_EMAIL}
+                </a>
+              </li>
+              <li className="flex items-center gap-2">
+                <Clock className="size-4 text-amber-400" aria-hidden="true" />
+                {STORE_HOURS}
+              </li>
+            </ul>
           </div>
           <div>
-            <p className="font-semibold">Shipping</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Calculated at checkout, before you pay.
-            </p>
+            <p className={footerHeading}>Shipping</p>
+            <p className="mt-3 text-sm leading-relaxed">Calculated at checkout, before you pay.</p>
           </div>
           <div>
-            <p className="font-semibold">Returns</p>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className={footerHeading}>Returns</p>
+            <p className="mt-3 text-sm leading-relaxed">
               Contact us before sending a part back. Fitment is confirmed at checkout.
             </p>
           </div>
           <nav aria-label="Policies">
-            <p className="font-semibold">Policies</p>
-            <ul className="mt-2 space-y-2 text-sm">
+            <p className={footerHeading}>Policies</p>
+            <ul className="mt-3 space-y-2 text-sm">
               {POLICY_PAGES.map((page) => (
                 <li key={page.to}>
-                  <Link to={page.to} className="text-sky-900 hover:underline">
+                  <Link to={page.to} className="hover:text-white hover:underline">
                     {page.title}
                   </Link>
                 </li>
               ))}
             </ul>
           </nav>
+        </div>
+        <div className="border-t border-white/10">
+          <p className="mx-auto max-w-6xl px-6 py-5 text-xs text-neutral-500 lg:px-8">
+            © {new Date().getFullYear()} TorqueTrack Diesel. All rights reserved.
+          </p>
         </div>
       </footer>
       <VehicleSelectorDialog />
@@ -253,7 +281,8 @@ function AccountNav() {
 
   if (!user) {
     return (
-      <Link to="/login" className={navLink}>
+      <Link to="/login" className={`${navLink} inline-flex items-center gap-1.5`}>
+        <UserRound className="size-4" aria-hidden="true" />
         Sign in
       </Link>
     )

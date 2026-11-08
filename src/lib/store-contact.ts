@@ -7,3 +7,5 @@ export const STORE_PHONE = {
 }
 
 export const STORE_EMAIL = 'torquetrackllc@gmail.com'
+
+export const STORE_HOURS = 'Open 8:00 AM – 6:00 PM Eastern Time'

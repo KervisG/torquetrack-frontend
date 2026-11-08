@@ -31,18 +31,23 @@ export function StorefrontAccountMenu({ user }: { user: SessionUser }) {
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={toggle}
-        className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md px-2 text-sm text-white/75 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+        className="group flex h-10 items-center gap-2 whitespace-nowrap rounded-full py-1 pl-1 pr-2 text-left text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 aria-expanded:bg-white/10"
       >
         <span
           aria-hidden="true"
-          className="grid size-7 shrink-0 place-items-center rounded-full bg-amber-400 text-xs font-semibold uppercase text-neutral-950"
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-amber-400 text-xs font-semibold uppercase text-neutral-950 ring-2 ring-white/15 transition group-hover:ring-amber-400/60"
         >
           {initials(user)}
         </span>
-        <span className="hidden max-w-40 truncate sm:block" title={user.email}>
-          {shortName}
+        {/* Saludo + "My account": deja claro que ahí está la cuenta. */}
+        <span className="hidden flex-col leading-tight md:flex" title={user.email}>
+          <span className="text-[11px] text-white/60">Hi, {shortName}</span>
+          <span className="max-w-36 truncate text-sm font-medium">My account</span>
         </span>
-        <ChevronDown className="size-4 text-white/60" aria-hidden="true" />
+        <ChevronDown
+          className="size-4 text-white/60 transition-transform group-aria-expanded:rotate-180"
+          aria-hidden="true"
+        />
       </button>
       {open ? (
         <div
