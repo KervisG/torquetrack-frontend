@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import { FormError } from '@/components/form-error'
 import { FormField } from '@/components/form-field'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   canonicalCategory,
   catalogCategories,
@@ -67,7 +69,6 @@ export function QuoteCatalogPicker({ vehicle, canSearch, onAdd }: QuoteCatalogPi
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(needle))
       })
-      .slice(0, 8)
   }, [products.data, query, category, vehicle])
 
   if (!canSearch) {
@@ -83,21 +84,21 @@ export function QuoteCatalogPicker({ vehicle, canSearch, onAdd }: QuoteCatalogPi
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
-      <div className="flex flex-wrap gap-2" aria-label="Categories">
-        <Button type="button" size="sm" variant={category === 'All' ? 'default' : 'outline'} onClick={() => setCategory('All')}>
-          All
-        </Button>
-        {categories.map((item) => (
-          <Button
-            key={item.value}
-            type="button"
-            size="sm"
-            variant={category === item.value ? 'default' : 'outline'}
-            onClick={() => setCategory(item.value)}
-          >
-            {item.label}
-          </Button>
-        ))}
+      <div className="space-y-2">
+        <Label htmlFor="quote-catalog-category">Category</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger id="quote-catalog-category" className="sm:w-72">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All categories</SelectItem>
+            {categories.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       {vinVehicle ? (
         <p className="text-sm text-muted-foreground">
@@ -111,7 +112,7 @@ export function QuoteCatalogPicker({ vehicle, canSearch, onAdd }: QuoteCatalogPi
       ) : matches.length === 0 ? (
         <p className="text-sm text-muted-foreground">No matching parts.</p>
       ) : (
-        <ul className="divide-y rounded-md border">
+        <ul className="max-h-96 divide-y overflow-y-auto rounded-md border">
           {matches.map((product) => (
             <li key={product.id} className="flex items-center justify-between gap-3 px-3 py-2">
               <span>
