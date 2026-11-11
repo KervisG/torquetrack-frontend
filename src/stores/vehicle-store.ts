@@ -14,7 +14,8 @@ export type SavedVehicle = FitVehicle & {
 type VehicleState = {
   vehicle: SavedVehicle | null
   selectorOpen: boolean
-  setVehicle: (vehicle: SavedVehicle) => void
+  // `keepSelectorOpen`: el VIN dejó avisos que el usuario tiene que leer.
+  setVehicle: (vehicle: SavedVehicle, options?: { keepSelectorOpen?: boolean }) => void
   clearVehicle: () => void
   setSelectorOpen: (open: boolean) => void
 }
@@ -66,7 +67,11 @@ export const useVehicleStore = create<VehicleState>()(
     (set) => ({
       vehicle: null,
       selectorOpen: false,
-      setVehicle: (vehicle) => set({ vehicle, selectorOpen: false }),
+      setVehicle: (vehicle, options) =>
+        set((state) => ({
+          vehicle,
+          selectorOpen: options?.keepSelectorOpen ? state.selectorOpen : false,
+        })),
       clearVehicle: () => set({ vehicle: null }),
       setSelectorOpen: (open) => set({ selectorOpen: open }),
     }),

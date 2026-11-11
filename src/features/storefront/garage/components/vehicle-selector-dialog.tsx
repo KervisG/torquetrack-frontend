@@ -74,7 +74,15 @@ function VehicleSelectorForm() {
           VIN
         </StorefrontButton>
       </div>
-      {mode === 'vin' ? <VinForm id="garage-vin" initialVin={vehicle?.vin ?? ''} /> : <ApplicationForm />}
+      {mode === 'vin' ? (
+        <VinForm
+          id="garage-vin"
+          initialVin={vehicle?.vin ?? ''}
+          onCompleteManually={() => setMode('selector')}
+        />
+      ) : (
+        <ApplicationForm />
+      )}
     </div>
   )
 }
