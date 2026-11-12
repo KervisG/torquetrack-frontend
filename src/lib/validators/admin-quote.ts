@@ -42,6 +42,26 @@ export const adminQuoteSchema = z.object({
     model: z.string().trim(),
     engine: z.string().trim(),
     vin: z.string().trim().toUpperCase(),
+    // Ficha técnica del VIN (NHTSA): solo se muestra, el fitment no la usa.
+    details: z
+      .object({
+        engine: z.string(),
+        drivetrain: z.string(),
+        transmission: z.string(),
+        body: z.string(),
+        trim: z.string(),
+        gvwr: z.string(),
+        fuel: z.string(),
+        horsepower: z.string(),
+        vehicleType: z.string(),
+        series: z.string(),
+        cab: z.string(),
+        brakes: z.string(),
+        manufacturer: z.string(),
+        plant: z.string(),
+      })
+      .optional(),
+    specs: z.array(z.object({ label: z.string(), value: z.string() })).optional(),
   }),
   items: z.array(quoteLineSchema).min(1, 'Add at least one item'),
   shipping: amount,

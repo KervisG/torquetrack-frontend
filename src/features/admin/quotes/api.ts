@@ -3,7 +3,14 @@ import type { DocumentTotals } from '@/features/account/portal/types'
 import { apiRequest } from '@/lib/api-client'
 import type { AdminQuoteValues } from '@/lib/validators/admin-quote'
 
-import type { AdminQuote, QuoteShippingAddress, QuoteTaxSource } from './types'
+import type {
+  AdminQuote,
+  QuoteShippingAddress,
+  QuoteTaxSource,
+  QuoteVehicle,
+  QuoteVehicleDetails,
+  QuoteVehicleSpec,
+} from './types'
 
 type RawRecord = Record<string, unknown>
 
@@ -50,6 +57,34 @@ function toLineItem(item: RawRecord): LineItem {
   }
 }
 
+function toVehicleDetails(value: unknown): QuoteVehicleDetails | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const raw = value as RawRecord
+  return {
+    engine: text(raw.engine),
+    drivetrain: text(raw.drivetrain),
+    transmission: text(raw.transmission),
+    body: text(raw.body),
+    trim: text(raw.trim),
+    gvwr: text(raw.gvwr),
+    fuel: text(raw.fuel),
+    horsepower: text(raw.horsepower),
+    vehicleType: text(raw.vehicleType),
+    series: text(raw.series),
+    cab: text(raw.cab),
+    brakes: text(raw.brakes),
+    manufacturer: text(raw.manufacturer),
+    plant: text(raw.plant),
+  }
+}
+
+function toVehicleSpecs(value: unknown): QuoteVehicleSpec[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  return value
+    .filter((spec): spec is RawRecord => Boolean(spec) && typeof spec === 'object')
+    .map((spec) => ({ label: text(spec.label), value: text(spec.value) }))
+}
+
 function toTaxSource(value: unknown): QuoteTaxSource {
   return value === 'calculated' || value === 'exempt' || value === 'manual' ? value : ''
 }
@@ -78,6 +113,8 @@ function toQuote(row: RawQuote): AdminQuote {
       model: text(vehicle.model),
       engine: text(vehicle.engine),
       vin: text(vehicle.vin),
+      details: toVehicleDetails(vehicle.details),
+      specs: toVehicleSpecs(vehicle.specs),
     },
     items: (row.items ?? []).map(toLineItem),
     totals,
@@ -122,7 +159,9 @@ export function saveQuote(
   )
 }
 
-export function decodeQuoteVin(vin: string): Promise<{ vehicle: { vin: string; year: string; make: string; model: string; engine: string } }> {
+export function decodeQuoteVin(
+  vin: string,
+): Promise<{ vehicle: Required<QuoteVehicle>; missingFields: string[]; warnings: string[] }> {
   return apiRequest('/admin/quotes/vin', {
     method: 'POST',
     body: JSON.stringify({ vin }),

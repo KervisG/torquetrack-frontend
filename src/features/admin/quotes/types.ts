@@ -12,13 +12,36 @@ export type QuoteCustomer = {
   phone: string
 }
 
+// Ficha técnica que trae el decode del VIN; ausente en un vehículo cargado a mano.
+export type QuoteVehicleDetails = {
+  engine: string
+  drivetrain: string
+  transmission: string
+  body: string
+  trim: string
+  gvwr: string
+  fuel: string
+  horsepower: string
+  vehicleType: string
+  series: string
+  cab: string
+  brakes: string
+  manufacturer: string
+  plant: string
+}
+
 export type QuoteVehicle = {
   year: string
   make: string
   model: string
   engine: string
   vin: string
+  details?: QuoteVehicleDetails
+  // Todos los campos con dato que devolvió NHTSA ("More details").
+  specs?: QuoteVehicleSpec[]
 }
+
+export type QuoteVehicleSpec = { label: string; value: string }
 
 export type QuoteShippingAddress = {
   address1: string

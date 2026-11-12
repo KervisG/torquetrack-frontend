@@ -15,7 +15,9 @@ import { adminQuoteSchema, type AdminQuoteValues } from '@/lib/validators/admin-
 import { decodeQuoteVin } from '../api'
 import { QuoteCatalogPicker } from './quote-catalog-picker'
 import { QuoteTaxControls, type SavedQuoteTax } from './quote-tax-controls'
-import { EDITABLE_QUOTE_STATUSES } from '../types'
+import { VehicleDetailsCard } from './vehicle-details-card'
+import { VehicleFitParts } from './vehicle-fit-parts'
+import { EDITABLE_QUOTE_STATUSES, type QuoteVehicle } from '../types'
 
 type QuoteFormProps = {
   defaultValues: AdminQuoteValues
@@ -70,6 +72,17 @@ const STEPS: Array<{ id: string; label: string; fields: FieldPath<AdminQuoteValu
   { id: 'review', label: 'Review', fields: [] },
 ]
 
+function vinDecodeNotices(warnings: string[] = [], missing: string[] = []): string[] {
+  const notices: string[] = []
+  if (warnings.includes('check_digit')) {
+    notices.push("This VIN may be mistyped: its check digit doesn't match. Double-check it.")
+  }
+  if (missing.length) {
+    notices.push(`The VIN didn't return: ${missing.join(', ')}. Fill them in by hand.`)
+  }
+  return notices
+}
+
 function joined(parts: Array<string | undefined>, separator = ' '): string {
   return parts.map((part) => (part ?? '').trim()).filter(Boolean).join(separator)
 }
@@ -103,8 +116,19 @@ export function QuoteForm({
   const items = useFieldArray({ control: form.control, name: 'items' })
   const values = useWatch({ control: form.control })
   const vehicle = values.vehicle
+  const currentVehicle: QuoteVehicle = {
+    year: vehicle?.year ?? '',
+    make: vehicle?.make ?? '',
+    model: vehicle?.model ?? '',
+    engine: vehicle?.engine ?? '',
+    vin: vehicle?.vin ?? '',
+    details: form.getValues('vehicle.details'),
+    specs: form.getValues('vehicle.specs'),
+  }
   const [vinError, setVinError] = useState<unknown>(null)
   const [vinPending, setVinPending] = useState(false)
+  // Avisos del decode que no bloquean: dígito verificador y campos que el VIN no trajo.
+  const [vinNotices, setVinNotices] = useState<string[]>([])
   const errors = form.formState.errors
   const steps = useFormSteps(STEPS, { free: editing })
   const statuses: string[] = [...EDITABLE_QUOTE_STATUSES]
@@ -196,6 +220,7 @@ export function QuoteForm({
                     const vin = form.getValues('vehicle.vin').trim()
                     setVinPending(true)
                     setVinError(null)
+                    setVinNotices([])
                     void decodeQuoteVin(vin)
                       .then((result) => {
                         form.setValue('vehicle.year', result.vehicle.year, { shouldDirty: true })
@@ -203,6 +228,9 @@ export function QuoteForm({
                         form.setValue('vehicle.model', result.vehicle.model, { shouldDirty: true })
                         form.setValue('vehicle.engine', result.vehicle.engine, { shouldDirty: true })
                         form.setValue('vehicle.vin', result.vehicle.vin, { shouldDirty: true })
+                        form.setValue('vehicle.details', result.vehicle.details, { shouldDirty: true })
+                        form.setValue('vehicle.specs', result.vehicle.specs, { shouldDirty: true })
+                        setVinNotices(vinDecodeNotices(result.warnings, result.missingFields))
                       })
                       .catch((caught: unknown) => setVinError(caught))
                       .finally(() => setVinPending(false))
@@ -215,6 +243,23 @@ export function QuoteForm({
             />
           </div>
           {vinError ? <FormError error={vinError} /> : null}
+          {vinNotices.length ? (
+            <ul
+              role="status"
+              className="space-y-1 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            >
+              {vinNotices.map((notice) => (
+                <li key={notice}>{notice}</li>
+              ))}
+            </ul>
+          ) : null}
+          <VehicleDetailsCard vehicle={currentVehicle} />
+          <VehicleFitParts
+            vehicle={currentVehicle}
+            canSearch={canSearchCatalog}
+            addedIds={(values.items ?? []).map((item) => item?.productId ?? '').filter(Boolean)}
+            onAdd={(line) => items.append(line)}
+          />
         </fieldset>
       </StepPanel>
 
@@ -222,13 +267,7 @@ export function QuoteForm({
         <fieldset className="space-y-4">
           <legend className="text-lg font-semibold">Catalog</legend>
           <QuoteCatalogPicker
-            vehicle={{
-              year: vehicle?.year ?? '',
-              make: vehicle?.make ?? '',
-              model: vehicle?.model ?? '',
-              engine: vehicle?.engine ?? '',
-              vin: vehicle?.vin ?? '',
-            }}
+            vehicle={currentVehicle}
             canSearch={canSearchCatalog}
             onAdd={(line) => items.append(line)}
           />
