@@ -3,6 +3,7 @@ import { useState } from 'react'
 
 import { FormError } from '@/components/form-error'
 import { SelectField } from '@/components/select-field'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/format-date'
 
@@ -39,25 +40,38 @@ export function TaxExemptionReview({ customerId }: { customerId: string }) {
   const { tax } = exemption.data
   const selected = status ?? exemption.data.status
 
+  const submitted = Boolean(
+    tax.taxId || tax.company || tax.taxState || tax.taxExemptionType || tax.submittedAt,
+  )
+
   return (
     <div className="space-y-4">
-      <dl className="grid gap-3 text-sm sm:grid-cols-2">
-        <Detail label="Current status" value={exemption.data.status} />
-        <Detail label="Company" value={tax.company} />
-        <Detail label="Tax ID / EIN" value={tax.taxId} />
-        <Detail label="State" value={tax.taxState} />
-        <Detail label="Exemption type" value={tax.taxExemptionType} />
-        <Detail label="Submitted" value={tax.submittedAt ? formatDate(tax.submittedAt) : ''} />
-        <Detail label="Reviewed" value={tax.reviewedAt ? formatDate(tax.reviewedAt) : ''} />
-        <Detail label="Reviewed by" value={tax.reviewedBy ?? ''} />
-      </dl>
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Current status</span>
+        <Badge variant="outline">{exemption.data.status}</Badge>
+      </div>
+      {submitted ? (
+        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+          <Detail label="Company" value={tax.company} />
+          <Detail label="Tax ID / EIN" value={tax.taxId} />
+          <Detail label="State" value={tax.taxState} />
+          <Detail label="Exemption type" value={tax.taxExemptionType} />
+          <Detail label="Submitted" value={tax.submittedAt ? formatDate(tax.submittedAt) : ''} />
+          <Detail label="Reviewed" value={tax.reviewedAt ? formatDate(tax.reviewedAt) : ''} />
+          <Detail label="Reviewed by" value={tax.reviewedBy ?? ''} />
+        </dl>
+      ) : (
+        <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+          The customer has not submitted a tax exemption yet.
+        </p>
+      )}
       {tax.certificateData ? (
         <CertificateLinks name={tax.certificateName} dataUrl={tax.certificateData} />
-      ) : (
+      ) : submitted ? (
         <p className="text-sm text-muted-foreground">No certificate uploaded.</p>
-      )}
+      ) : null}
       <form
-        className="flex flex-wrap items-end gap-3"
+        className="flex flex-wrap items-end gap-3 border-t pt-4"
         onSubmit={(event) => {
           event.preventDefault()
           update.mutate(selected)
@@ -84,11 +98,13 @@ export function TaxExemptionReview({ customerId }: { customerId: string }) {
   )
 }
 
+// Solo se muestran los datos cargados: un campo vacío no ocupa espacio.
 function Detail({ label, value }: { label: string; value: string }) {
+  if (!value) return null
   return (
-    <div>
+    <div className="grid grid-cols-[7rem_1fr] gap-2">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{value || '—'}</dd>
+      <dd className="break-words font-medium">{value}</dd>
     </div>
   )
 }
