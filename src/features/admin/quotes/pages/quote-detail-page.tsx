@@ -187,7 +187,9 @@ function taxLabel(source: QuoteTaxSource, description: string): string {
     manual: 'Manual override',
     '': '',
   }
-  return [labels[source], description].filter(Boolean).join(' · ')
+  // La descripción guardada a veces repite la etiqueta ("Manual override").
+  const extra = description.trim().toLowerCase() === labels[source].toLowerCase() ? '' : description
+  return [labels[source], extra].filter(Boolean).join(' · ')
 }
 
 function vehicleLabel(quote: AdminQuote): string {
