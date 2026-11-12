@@ -32,8 +32,8 @@ describe('QuoteDetailPage', () => {
     const items = within(screen.getByRole('table', { name: 'Items' }))
     expect(items.getByText('HX35 Turbocharger')).toBeInTheDocument()
     expect(within(screen.getByLabelText('Totals')).getByText('$634.00')).toBeInTheDocument()
-    // Sin botón de PDF: la generación queda fuera del panel.
-    expect(screen.queryByText(/pdf/i)).not.toBeInTheDocument()
+    // El PDF se descarga desde el panel con el mismo enlace público del cliente.
+    expect(screen.getByRole('button', { name: 'Download PDF' })).toBeInTheDocument()
   })
 
   it('shows the email error when sending fails', async () => {

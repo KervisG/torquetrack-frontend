@@ -33,6 +33,16 @@ export function QuoteActions({ quote, can }: QuoteActionsProps) {
   }
   const send = useMutation({ mutationFn: () => sendQuote(quote.id), onSuccess: refresh })
   const link = useMutation({ mutationFn: () => getPublicLink(quote.id) })
+  // El PDF es el mismo que recibe el cliente: sale del enlace público (el
+  // token se crea o reutiliza) y el servidor lo manda como adjunto, así que
+  // navegar a la URL lo descarga sin salir del panel.
+  const pdf = useMutation({
+    mutationFn: async () => {
+      const { url } = await getPublicLink(quote.id)
+      const token = url.split('/quote/')[1] ?? ''
+      window.location.assign(`/api/quote/public/${encodeURIComponent(token)}/pdf/`)
+    },
+  })
   const reopen = useMutation({ mutationFn: () => reopenQuote(quote.id), onSuccess: refresh })
   const convert = useMutation({
     mutationFn: () => convertQuote(quote.id),
@@ -47,7 +57,7 @@ export function QuoteActions({ quote, can }: QuoteActionsProps) {
       navigate('/admin/quotes')
     },
   })
-  const mutations = [send, link, reopen, convert, remove]
+  const mutations = [send, link, pdf, reopen, convert, remove]
   const busy = mutations.some((mutation) => mutation.isPending)
   const error = mutations.find((mutation) => mutation.error)?.error
 
@@ -70,6 +80,12 @@ export function QuoteActions({ quote, can }: QuoteActionsProps) {
         <Button type="button" variant="outline" disabled={busy} onClick={() => link.mutate()}>
           Get public link
         </Button>
+        {/* El backend no sirve el PDF de una cotización vencida (410). */}
+        {!expired ? (
+          <Button type="button" variant="outline" disabled={busy} onClick={() => pdf.mutate()}>
+            {pdf.isPending ? 'Preparing PDF…' : 'Download PDF'}
+          </Button>
+        ) : null}
         {can('quotes.edit') && expired ? (
           <Button type="button" variant="outline" disabled={busy} onClick={() => reopen.mutate()}>
             Reopen for 30 days
