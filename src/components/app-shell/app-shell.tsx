@@ -71,28 +71,36 @@ export function AppShell({
           collapsed ? 'w-16' : 'w-64',
         )}
       >
+        {/* Franja ámbar superior: la firma de la marca en el panel. */}
+        <div aria-hidden="true" className="h-[3px] shrink-0 bg-amber-400" />
         <Brand homeHref={homeHref} area={area} collapsed={collapsed} />
+        {/* Pestaña en el borde: colapsa o expande sin bajar hasta el final. */}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={cn(
+            'absolute -right-3 top-[22px] z-10 grid size-6 place-items-center rounded-full border border-primary-foreground/20 bg-primary text-primary-foreground/80 shadow-md transition-colors',
+            'hover:border-amber-400 hover:text-amber-400',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400',
+          )}
+        >
+          {collapsed ? (
+            <PanelLeftOpen className="size-3.5" aria-hidden="true" />
+          ) : (
+            <PanelLeftClose className="size-3.5" aria-hidden="true" />
+          )}
+        </button>
         <SidebarNav label={navLabel} groups={groups} collapsed={collapsed} />
-        <div className="border-t border-primary-foreground/10 p-3">
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={cn(
-              'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-primary-foreground/70 transition-colors hover:bg-primary-foreground/10 hover:text-primary-foreground',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground/70',
-              collapsed && 'justify-center px-0',
-            )}
-          >
-            {collapsed ? (
-              <PanelLeftOpen className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
-              <PanelLeftClose className="size-4 shrink-0" aria-hidden="true" />
-            )}
-            <span className={cn(collapsed && 'sr-only')}>Collapse</span>
-          </button>
-        </div>
+        <p
+          className={cn(
+            'border-t border-primary-foreground/10 px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-primary-foreground/35',
+            collapsed && 'sr-only',
+          )}
+        >
+          Diesel Parts · Admin
+        </p>
       </aside>
 
       <div className={cn('flex min-h-screen flex-col transition-[padding] duration-200', collapsed ? 'md:pl-16' : 'md:pl-64')}>
