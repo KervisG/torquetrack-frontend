@@ -26,6 +26,7 @@ import {
   type SaveChange,
 } from '../components/quote-inline-edit'
 import { VehicleDetailsCard } from '../components/vehicle-details-card'
+import { VinCheckButton } from '../components/vin-check-line'
 import { useSaveQuote } from '../hooks/use-save-quote'
 import { adminQuoteKeys } from '../query-keys'
 import { quoteFormValues, savedQuoteTax } from '../quote-form-values'
@@ -423,10 +424,13 @@ function ItemsSection({ quote, canEdit, saveChange, canSearchCatalog }: EditProp
             </Button>
           </div>
         ) : (
-          <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(true)}>
-            <Plus className="size-4" aria-hidden="true" />
-            Add item
-          </Button>
+          <div className="flex flex-wrap items-start gap-1">
+            <Button type="button" size="sm" variant="ghost" onClick={() => setAdding(true)}>
+              <Plus className="size-4" aria-hidden="true" />
+              Add item
+            </Button>
+            <VinCheckButton quote={quote} saveChange={saveChange} />
+          </div>
         )
       ) : null}
     </Section>
