@@ -12,7 +12,7 @@ import { listQuotes } from '../api'
 import { QuoteForm } from '../components/quote-form'
 import { useSaveQuote } from '../hooks/use-save-quote'
 import { adminQuoteKeys } from '../query-keys'
-import type { AdminQuote } from '../types'
+import { quoteFormValues, savedQuoteTax } from '../quote-form-values'
 
 const newQuote: AdminQuoteValues = {
   status: 'ACTIVE',
@@ -24,30 +24,6 @@ const newQuote: AdminQuoteValues = {
   tax: 0,
   taxOverride: { enabled: false, reason: '' },
   memo: '',
-}
-
-// Un override guardado se vuelve a mostrar solo a quien puede fijarlo; sin el
-// permiso el guardado recalcula el impuesto.
-function valuesFor(quote: AdminQuote, canOverrideTax: boolean): AdminQuoteValues {
-  const overriding = canOverrideTax && quote.taxSource === 'manual'
-  return {
-    status: quote.status,
-    customer: { ...quote.customer },
-    vehicle: { ...quote.vehicle },
-    items: quote.items.map((item) => ({
-      productId: item.productId,
-      title: item.title,
-      partNumber: item.partNumber,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      coreCharge: item.coreCharge,
-    })),
-    shipping: quote.shipping,
-    shippingAddress: { ...quote.shippingAddress },
-    tax: quote.tax,
-    taxOverride: { enabled: overriding, reason: overriding ? quote.taxOverrideReason : '' },
-    memo: quote.memo,
-  }
 }
 
 // `/admin/quotes/new` y `/admin/quotes/:id/edit`. Alta y edición van por
@@ -94,20 +70,12 @@ export function QuoteEditorPage() {
     body = (
       <QuoteForm
         key={existing?.id ?? 'new'}
-        defaultValues={existing ? valuesFor(existing, canOverrideTax) : newQuote}
+        defaultValues={existing ? quoteFormValues(existing, canOverrideTax) : newQuote}
         quoteId={existing?.id}
         customerId={existing?.customerId ?? undefined}
         editing={Boolean(existing)}
         canOverrideTax={canOverrideTax}
-        savedTax={
-          existing
-            ? {
-                amount: existing.tax,
-                source: existing.taxSource,
-                description: existing.taxDescription,
-              }
-            : undefined
-        }
+        savedTax={existing ? savedQuoteTax(existing) : undefined}
         canSearchCatalog={can('products.view')}
         submitting={save.isPending}
         error={save.error}

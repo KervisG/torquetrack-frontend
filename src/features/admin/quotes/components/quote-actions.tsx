@@ -15,13 +15,16 @@ import type { AdminQuote } from '../types'
 type QuoteActionsProps = {
   quote: AdminQuote
   can: (permission: string) => boolean
+  // Con `onEdit` la edición se abre en la misma hoja; sin él, "Edit quote"
+  // lleva a la página del editor.
+  onEdit?: () => void
 }
 
 type Confirming = 'convert' | 'delete' | null
 
 // Cada acción se muestra solo con el permiso que exige su endpoint. El error
 // del backend (correo sin configurar, cotización vencida) se muestra tal cual.
-export function QuoteActions({ quote, can }: QuoteActionsProps) {
+export function QuoteActions({ quote, can, onEdit }: QuoteActionsProps) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [confirming, setConfirming] = useState<Confirming>(null)
@@ -65,46 +68,51 @@ export function QuoteActions({ quote, can }: QuoteActionsProps) {
   const converted = quote.status === 'CONVERTED'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {can('quotes.create') ? (
-          <Button asChild variant="outline">
-            <Link to={`/admin/quotes/${encodeURIComponent(quote.id)}/edit`}>Edit quote</Link>
-          </Button>
+        {/* Una cotización convertida ya tiene pedido: el backend no la deja editar. */}
+        {can('quotes.create') && !converted ? (
+          onEdit ? (
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={onEdit}>
+              Edit quote
+            </Button>
+          ) : (
+            <Button asChild size="sm" variant="outline">
+              <Link to={`/admin/quotes/${encodeURIComponent(quote.id)}/edit`}>Edit quote</Link>
+            </Button>
+          )
         ) : null}
         {can('quotes.send') && quote.customer.email ? (
-          <Button type="button" disabled={busy} onClick={() => send.mutate()}>
+          <Button type="button" size="sm" disabled={busy} onClick={() => send.mutate()}>
             {send.isPending ? 'Sending…' : 'Send to customer'}
           </Button>
         ) : null}
-        <Button type="button" variant="outline" disabled={busy} onClick={() => link.mutate()}>
-          Get public link
-        </Button>
-        {/* El backend no sirve el PDF de una cotización vencida (410). */}
-        {!expired ? (
-          <Button type="button" variant="outline" disabled={busy} onClick={() => pdf.mutate()}>
-            {pdf.isPending ? 'Preparing PDF…' : 'Download PDF'}
-          </Button>
-        ) : null}
         {can('quotes.edit') && expired ? (
-          <Button type="button" variant="outline" disabled={busy} onClick={() => reopen.mutate()}>
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => reopen.mutate()}>
             Reopen for 30 days
           </Button>
         ) : null}
         {can('quotes.convert') && !expired && !converted ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => setConfirming('convert')}
-          >
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setConfirming('convert')}>
             Convert to order
           </Button>
         ) : null}
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => link.mutate()}>
+          Get public link
+        </Button>
+        {/* El backend no sirve el PDF de una cotización vencida (410). */}
+        {!expired ? (
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => pdf.mutate()}>
+            {pdf.isPending ? 'Preparing PDF…' : 'Download PDF'}
+          </Button>
+        ) : null}
+        {/* Borrar va aparte, al final de la fila, para no pulsarlo por error. */}
         {can('quotes.delete') ? (
           <Button
             type="button"
-            variant="outline"
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive sm:ml-auto"
             disabled={busy}
             onClick={() => setConfirming('delete')}
           >
@@ -159,19 +167,21 @@ export function QuoteActions({ quote, can }: QuoteActionsProps) {
         </p>
       ) : null}
       {link.data ? (
-        <div className="space-y-2">
-          <FormField
-            id={`public-link-${quote.id}`}
-            label="Public quote link"
-            readOnly
-            value={link.data.url}
-            onFocus={(event) => event.currentTarget.select()}
-          />
+        <div className="flex max-w-3xl flex-wrap items-end gap-3">
+          <div className="min-w-64 flex-1">
+            <FormField
+              id={`public-link-${quote.id}`}
+              label="Public quote link"
+              readOnly
+              value={link.data.url}
+              onFocus={(event) => event.currentTarget.select()}
+            />
+          </div>
           <a
             href={link.data.url}
             target="_blank"
             rel="noreferrer"
-            className="text-sm underline underline-offset-4"
+            className="pb-2 text-sm underline underline-offset-4"
           >
             Open public page
           </a>
