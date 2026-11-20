@@ -5,27 +5,8 @@ import type {
   CheckoutCustomer,
   CheckoutResponse,
   FitmentResponse,
-  ShippingRate,
-  ShippingRatesResponse,
-  ShippingSelection,
   TaxEstimate,
 } from './types'
-
-// El paquete (peso y medidas) lo arma el backend desde el catálogo; un peso
-// mandado por el navegador cotizaría un envío más barato.
-export function getShippingRates(
-  payload: {
-    to: Record<string, string>
-    items: Array<{ id: string; qty: number }>
-  },
-  signal?: AbortSignal,
-): Promise<ShippingRatesResponse> {
-  return apiRequest<ShippingRatesResponse>('/shipping/rates', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-    signal,
-  })
-}
 
 export function estimateTax(
   payload: {
@@ -57,14 +38,8 @@ export function checkFitment(payload: {
   })
 }
 
-export function toShippingSelection(rate: ShippingRate | null): ShippingSelection | null {
-  if (!rate?.id || !rate.shipmentId) return null
-  return { shipmentId: rate.shipmentId, rateId: rate.id }
-}
-
 export function createCheckout(payload: {
   items: Array<{ id: string; qty: number }>
-  shipping: ShippingSelection
   // Opcional: sin VIN el pedido se crea sin vehículo y sin chequeo de fitment.
   vehicle?: VinVehicle
   customer: CheckoutCustomer

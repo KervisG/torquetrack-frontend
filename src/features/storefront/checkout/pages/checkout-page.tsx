@@ -31,14 +31,8 @@ import {
 import { MAX_CART_QUANTITY, useCartStore } from '@/stores/cart-store'
 import { describeVehicle, useVehicleStore } from '@/stores/vehicle-store'
 
-import {
-  checkFitment,
-  createCheckout,
-  estimateTax,
-  getShippingRates,
-  toShippingSelection,
-} from '../api'
-import type { FitmentResponse, ShippingRate, TaxEstimate, VinVehicle } from '../types'
+import { checkFitment, createCheckout, estimateTax } from '../api'
+import type { FitmentResponse, TaxEstimate, VinVehicle } from '../types'
 
 // `autoComplete` deja que el navegador y los gestores de contraseñas llenen
 // la dirección de una vez.
@@ -58,9 +52,8 @@ const CUSTOMER_FIELDS = [
 type CustomerField = (typeof CUSTOMER_FIELDS)[number][0]
 const CUSTOMER_FIELD_NAMES: readonly string[] = CUSTOMER_FIELDS.map(([field]) => field)
 
-// Dónde se muestra un error del backend: un campo del cliente, el VIN o la
-// sección de envío.
-type CheckoutErrorTarget = CustomerField | 'vin' | 'shipping'
+// Dónde se muestra un error del backend: un campo del cliente o el VIN.
+type CheckoutErrorTarget = CustomerField | 'vin'
 
 // Respaldo para respuestas sin `field`: se deduce el campo del mensaje. No se
 // copia aquí la tabla de prefijos de USPS; el backend es la única fuente y el
@@ -85,7 +78,6 @@ function isVinApiMessage(message: string): boolean {
 function checkoutErrorTarget(failure: ApiError, field: string | undefined): CheckoutErrorTarget | null {
   if (failure.field) {
     if (field === 'vin' || field === 'vehicle') return 'vin'
-    if (field === 'shipping') return 'shipping'
     return field && CUSTOMER_FIELD_NAMES.includes(field) ? (field as CustomerField) : null
   }
   if (isVinApiMessage(failure.message)) return 'vin'
@@ -106,15 +98,10 @@ const PREFILL_FIELDS = [
   'country',
 ] as const
 
-// Campos que cambian la cotización de envío. Mismo patrón de ZIP que el
-// schema del formulario: no se cotiza una dirección que no pasaría el pago.
+// Campos de la dirección que decide el impuesto. Mismo patrón de ZIP que el
+// schema del formulario: no se calcula una dirección que no pasaría el pago.
 const ADDRESS_FIELDS = ['name', 'phone', 'address1', 'address2', 'city', 'state', 'zip', 'country'] as const
 const ZIP_PATTERN = /^\d{5}(-\d{4})?$/
-
-// Espera a que el cliente deje de tipear antes de pedir tarifas a EasyPost.
-const RATES_DEBOUNCE_MS = 500
-
-type RateOption = { label: string; rate: ShippingRate | null }
 
 type TaxInput = {
   state: string
@@ -148,17 +135,9 @@ function taxErrorMessage(taxFailure: unknown): string {
   return taxFailure instanceof ApiError ? taxFailure.message : 'Tax calculation failed'
 }
 
-function cheapestRate(options: RateOption[]): RateOption | undefined {
-  return options
-    .filter((option) => option.rate)
-    .sort((a, b) => Number(a.rate?.rate) - Number(b.rate?.rate))[0]
-}
-
 export function CheckoutPage() {
   const items = useCartStore((state) => state.items)
   const priceChanges = useCartStore((state) => state.priceChanges)
-  const shipping = useCartStore((state) => state.shipping)
-  const setShipping = useCartStore((state) => state.setShipping)
   const setQty = useCartStore((state) => state.setQty)
   const remove = useCartStore((state) => state.remove)
   const savedVehicle = useVehicleStore((state) => state.vehicle)
@@ -214,20 +193,14 @@ export function CheckoutPage() {
   const [vin, setVin] = useState(savedVehicle?.source === 'vin' ? savedVehicle.vin : '')
   const pendingSavedVehicle = useRef(savedVehicle?.source === 'vin' ? savedVehicle : null)
   const vinInputRef = useRef<HTMLInputElement>(null)
-  const shippingHeadingRef = useRef<HTMLHeadingElement>(null)
   const [vinError, setVinError] = useState('')
   const [vehicle, setVehicle] = useState<VinVehicle | null>(null)
   const [fitment, setFitment] = useState<FitmentResponse | null>(null)
-  // Cada resultado guarda la clave (dirección, ítems, tarifa, intento) con la
+  // Cada resultado guarda la clave (dirección, ítems, intento) con la
   // que se pidió: si la clave actual es otra, el resultado no vale y la
   // pantalla muestra "cargando" sin tener que borrarlo a mano.
   const [taxResult, setTaxResult] = useState<KeyedResult<{ estimate: TaxEstimate }> | null>(null)
   const [taxAttempt, setTaxAttempt] = useState(0)
-  const [ratesResult, setRatesResult] = useState<KeyedResult<{ options: RateOption[] }> | null>(null)
-  const [ratesAttempt, setRatesAttempt] = useState(0)
-  // El servicio que eligió el cliente (Ground, 2nd Day…) se conserva al
-  // recotizar si sigue disponible; si no, se toma el más barato.
-  const preferredTier = useRef('')
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [paying, setPaying] = useState(false)
@@ -250,7 +223,8 @@ export function CheckoutPage() {
 
   const parts = rows.reduce((sum, row) => sum + Number(row.price || 0) * row.qty, 0)
   const cores = rows.reduce((sum, row) => sum + Number(row.coreCharge || 0) * row.qty, 0)
-  const ship = Number(shipping?.rate || 0)
+  // El envío de la tienda es gratis (Regular Ground); el backend no lo cobra.
+  const ship = 0
   const invalidPrice = rows.some((row) => !Number.isFinite(Number(row.price)) || Number(row.price) <= 0)
   const fitmentApproved = Boolean(fitment?.compatible)
   // El VIN es opcional; si se escribió uno, tiene que estar verificado (el
@@ -266,16 +240,9 @@ export function CheckoutPage() {
     Boolean(name?.trim() && address1?.trim() && city?.trim()) &&
     isUsStateCode(state) &&
     ZIP_PATTERN.test(zip?.trim() ?? '')
-  const quoteKey = addressComplete && cartItems.length ? JSON.stringify([address, cartItems]) : ''
-  const ratesKey = quoteKey ? `${ratesAttempt}|${quoteKey}` : ''
-  const currentRates = ratesResult?.key === ratesKey ? ratesResult : null
-  const ratesStatus = !ratesKey ? 'idle' : !currentRates ? 'loading' : currentRates.error ? 'error' : 'idle'
-  const rates = currentRates?.options ?? []
-  // El id de la tarifa entra en la clave aunque `requestTax` no lo use:
-  // otra tarifa con el mismo monto igual pide el impuesto de nuevo.
   const taxInput =
-    shipping?.id && addressComplete
-      ? JSON.stringify({ state, zip, city, address1, parts, cores, ship, rateId: shipping.id })
+    addressComplete && cartItems.length
+      ? JSON.stringify({ state, zip, city, address1, parts, cores, ship })
       : ''
   const taxKey = taxInput ? `${taxAttempt}|${taxInput}` : ''
   const currentTax = taxResult?.key === taxKey ? taxResult : null
@@ -344,69 +311,6 @@ export function CheckoutPage() {
       })
   }, [itemsKey])
 
-  // Cotiza solo cuando la dirección está completa, con espera entre teclas.
-  // La tarifa elegida era para la dirección o los ítems anteriores y el
-  // backend la rechazaría, así que se descarta antes de recotizar.
-  // `ratesAttempt` es el reintento.
-  useEffect(() => {
-    setShipping(null)
-    if (!ratesKey) return
-    let cancelled = false
-    // Abortar corta la consulta en vuelo cuando la dirección o el carrito cambian.
-    const controller = new AbortController()
-    const timer = setTimeout(async () => {
-      const values = form.getValues()
-      try {
-        const response = await getShippingRates(
-          {
-            to: {
-              name: values.name,
-              phone: values.phone || '',
-              street1: values.address1,
-              street2: values.address2 || '',
-              city: values.city,
-              state: values.state.toUpperCase(),
-              zip: values.zip.trim(),
-              country: values.country || 'US',
-            },
-            items: JSON.parse(itemsKey) as Array<{ id: string; qty: number }>,
-          },
-          controller.signal,
-        )
-        if (cancelled) return
-        // `200` con `configured: false`: EasyPost no está configurado.
-        if (!response.configured) {
-          setRatesResult({ key: ratesKey, error: response.message || 'Shipping provider is not configured' })
-          return
-        }
-        const options: RateOption[] = [
-          { label: 'Ground', rate: response.ground ?? null },
-          { label: '2nd Day', rate: response.secondDay ?? null },
-          { label: 'Overnight', rate: response.overnight ?? null },
-        ]
-        const preferred = options.find((option) => option.label === preferredTier.current && option.rate)
-        const picked = preferred ?? cheapestRate(options)
-        setRatesResult({
-          key: ratesKey,
-          options,
-          ...(picked?.rate ? {} : { error: 'No shipping service is available for this address.' }),
-        })
-        if (picked?.rate) setShipping(picked.rate)
-      } catch (ratesFailure) {
-        if (cancelled) return
-        setRatesResult({
-          key: ratesKey,
-          error: ratesFailure instanceof ApiError ? ratesFailure.message : 'Could not get shipping rates',
-        })
-      }
-    }, RATES_DEBOUNCE_MS)
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-      controller.abort()
-    }
-  }, [ratesKey, itemsKey, form, setShipping])
-
   // Lleva el error al lugar culpable y devuelve dónde quedó (`null` si no
   // corresponde a ninguno). `shouldFocus` solo al pagar: el cálculo
   // automático no le quita el foco a quien está tipeando.
@@ -420,8 +324,6 @@ export function CheckoutPage() {
       if (target === 'vin') {
         setVinError(message)
         if (shouldFocus) vinInputRef.current?.focus()
-      } else if (target === 'shipping') {
-        if (shouldFocus) shippingHeadingRef.current?.focus()
       } else {
         form.setError(target, { type: 'server', message }, { shouldFocus })
       }
@@ -438,8 +340,8 @@ export function CheckoutPage() {
     }
   }, [form])
 
-  // El impuesto depende del envío elegido: se calcula solo cuando hay
-  // dirección y tarifa, y de nuevo si cambia cualquiera de las dos. Una
+  // El impuesto se calcula cuando la dirección está completa y de nuevo si
+  // cambia la dirección o el carrito. Una
   // respuesta vieja no pisa una más nueva: la limpieza del efecto la descarta.
   useEffect(() => {
     if (!taxKey) return
@@ -469,22 +371,6 @@ export function CheckoutPage() {
       showVinError('Verify the VIN you entered, or clear it, before payment.')
       return
     }
-    if (!shipping) {
-      setError(
-        ratesStatus === 'loading'
-          ? 'Wait for shipping rates to finish loading.'
-          : 'Choose a shipping method before payment.',
-      )
-      return
-    }
-    const selection = toShippingSelection(shipping)
-    if (!selection) {
-      // Tarifa guardada en una visita anterior, sin shipment que verificar.
-      setShipping(null)
-      setRatesAttempt((attempt) => attempt + 1)
-      setError('Shipping rates expired. Choose a shipping method again.')
-      return
-    }
     setPaying(true)
     try {
       // Se recalcula justo antes de pagar con lo que el formulario validó.
@@ -507,7 +393,6 @@ export function CheckoutPage() {
       }
       const result = await createCheckout({
         items: cartItems,
-        shipping: selection,
         ...(typedVin && vehicle ? { vehicle } : {}),
         customer: {
           ...values,
@@ -520,10 +405,8 @@ export function CheckoutPage() {
     } catch (payError) {
       setPaying(false)
       // Un error de un campo se muestra en el campo; el resumen solo avisa.
-      // El envío no tiene campo propio: su mensaje va en el resumen.
-      const shown = showFieldError(payError, true)
-      if (shown) {
-        setError(shown.target === 'shipping' ? shown.message : FIX_FIELDS_MESSAGE)
+      if (showFieldError(payError, true)) {
+        setError(FIX_FIELDS_MESSAGE)
         return
       }
       setError(payError instanceof ApiError ? payError.message : String((payError as Error).message))
@@ -531,12 +414,7 @@ export function CheckoutPage() {
   }
 
   // Un solo texto de progreso para el lector de pantalla: lo más reciente gana.
-  const liveStatus =
-    ratesStatus === 'loading'
-      ? 'Getting live carrier rates…'
-      : taxStatus === 'loading'
-        ? 'Calculating tax…'
-        : status
+  const liveStatus = taxStatus === 'loading' ? 'Calculating tax…' : status
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -546,7 +424,7 @@ export function CheckoutPage() {
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">Cart & Secure Checkout</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Review your parts, optionally verify your VIN, enter your shipping address, then continue to the
-        payment provider&apos;s secure page. Shipping and tax update automatically.
+        payment provider&apos;s secure page. Shipping is free; tax updates automatically.
       </p>
       {rows.length ? (
         <p className="mt-2 text-sm text-muted-foreground">
@@ -770,70 +648,8 @@ export function CheckoutPage() {
                 )}
               </div>
 
-              {/* `tabIndex={-1}`: recibe el foco cuando el backend rechaza el envío. */}
-              <h2 ref={shippingHeadingRef} tabIndex={-1} className="mt-6 text-base font-semibold outline-none">
-                Shipping Method
-              </h2>
-              {!addressComplete && rows.length ? (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Enter your name, street, city, state and ZIP to see live shipping rates.
-                </p>
-              ) : null}
-              {ratesStatus === 'loading' ? (
-                <p className="mt-2 text-sm text-muted-foreground">Getting live carrier rates…</p>
-              ) : null}
-              {ratesStatus === 'error' ? (
-                <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <p role="alert" className="text-sm text-destructive">
-                    {currentRates?.error}
-                  </p>
-                  <StorefrontButton
-                    type="button"
-                    tone="outline"
-                    size="sm"
-                    onClick={() => setRatesAttempt((attempt) => attempt + 1)}
-                  >
-                    Retry shipping rates
-                  </StorefrontButton>
-                </div>
-              ) : null}
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                {rates.map((option) => {
-                  const selected = Boolean(shipping?.id && shipping.id === option.rate?.id)
-                  return (
-                    <Card
-                      key={option.label}
-                      className={selected ? 'border-amber-400 ring-1 ring-amber-400' : undefined}
-                    >
-                      <CardContent className="p-3">
-                        <p className="text-sm text-muted-foreground">{option.label}</p>
-                        {option.rate ? (
-                          <>
-                            <p className="text-xl font-semibold">{formatMoney(option.rate.rate)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {option.rate.carrier} · {option.rate.service}
-                            </p>
-                            <StorefrontButton
-                              type="button"
-                              tone={selected ? 'selected' : 'outline'}
-                              className="mt-2 w-full"
-                              aria-pressed={selected}
-                              onClick={() => {
-                                preferredTier.current = option.label
-                                setShipping(option.rate)
-                              }}
-                            >
-                              {selected ? 'Selected' : 'Use this rate'}
-                            </StorefrontButton>
-                          </>
-                        ) : (
-                          <p>Unavailable</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
+              <h2 className="mt-6 text-base font-semibold">Shipping Method</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Free Regular Ground shipping on every order.</p>
             </CardContent>
           </Card>
         </div>
@@ -854,7 +670,7 @@ export function CheckoutPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Shipping</dt>
-                <dd>{shipping ? formatMoney(ship) : 'Not selected'}</dd>
+                <dd>Free</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Estimated tax</dt>
@@ -900,8 +716,8 @@ export function CheckoutPage() {
               <StorefrontButton
                 type="submit"
                 className="rounded-full bg-amber-400 text-neutral-950 hover:bg-amber-500"
-                // Sin envío o con el VIN sin verificar se puede enviar igual: el
-                // envío marca lo que falta en vez de dejar un botón muerto.
+                // Con el VIN sin verificar se puede enviar igual: el envío marca
+                // lo que falta en vez de dejar un botón muerto.
                 disabled={!rows.length || invalidPrice || paying}
               >
                 {paying ? 'Preparing payment…' : 'Continue to Secure Card Payment'}

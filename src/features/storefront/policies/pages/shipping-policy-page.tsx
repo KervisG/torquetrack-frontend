@@ -30,14 +30,9 @@ export function ShippingPolicyPage() {
       </PolicySection>
       <PolicySection title="Shipping Rates and Methods">
         <p>
-          Shipping is calculated at checkout, before you pay, using live rates from carriers such
-          as UPS, FedEx and USPS. The rate is based on your shipping address and the weight and
-          package size of the parts in your order. Depending on your destination, you may choose
-          from ground, second-day and overnight services.
-        </p>
-        <p>
-          Rates shown at checkout are held for a limited time. If they expire before you pay, you
-          will be asked to refresh them, and the updated rate will be shown before payment.
+          Every online order ships free by regular ground service with a carrier such as UPS,
+          FedEx or USPS. If you need faster delivery, contact us before you order and we will
+          quote it for you.
         </p>
         <p>
           Some large or heavy parts may require special handling. If an item needs a different

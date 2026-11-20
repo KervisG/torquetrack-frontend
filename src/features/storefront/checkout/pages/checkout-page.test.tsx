@@ -11,7 +11,7 @@ import { server } from '@/test/msw-server'
 import { renderApp } from '@/test/render-app'
 
 describe('CheckoutPage', () => {
-  afterEach(() => useCartStore.setState({ items: [], shipping: null }))
+  afterEach(() => useCartStore.setState({ items: [] }))
 
   it('shows an empty cart until products are added', async () => {
     server.use(productsOk())
@@ -31,22 +31,16 @@ describe('CheckoutPage', () => {
     expect(screen.getByLabelText('Full name')).toHaveValue('')
   })
 
-  it('quotes shipping automatically and quotes again when the cart changes', async () => {
+  it('ships free and calculates tax once the address is complete', async () => {
     const user = userEvent.setup()
-    useCartStore.setState({ items: [{ id: sampleProduct.id, qty: 1 }], shipping: null })
-    let quotedItems: unknown
+    useCartStore.setState({ items: [{ id: sampleProduct.id, qty: 1 }] })
+    let taxedShipping: unknown
     server.use(
       productsOk(),
-      http.post('/api/shipping/rates/', async ({ request }) => {
-        quotedItems = ((await request.json()) as { items: unknown }).items
-        return HttpResponse.json({
-          configured: true,
-          ground: { id: 'rate_ground', shipmentId: 'shp_1', carrier: 'USPS', service: 'Ground', rate: 8.5 },
-          secondDay: null,
-          overnight: null,
-        })
+      http.post('/api/tax/estimate/', async ({ request }) => {
+        taxedShipping = ((await request.json()) as { shipping: unknown }).shipping
+        return HttpResponse.json({ tax: 0, source: 'No sales tax' })
       }),
-      http.post('/api/tax/estimate/', () => HttpResponse.json({ tax: 0, source: 'No sales tax' })),
     )
     renderApp('/checkout')
 
@@ -56,18 +50,9 @@ describe('CheckoutPage', () => {
     await user.selectOptions(screen.getByLabelText('State'), 'FL')
     await user.type(screen.getByLabelText('ZIP'), '33601')
 
-    // Con la dirección completa se cotiza sola y se elige la tarifa más barata.
-    expect(await screen.findByRole('button', { name: 'Selected' })).toBeInTheDocument()
-    expect(quotedItems).toEqual([{ id: sampleProduct.id, qty: 1 }])
-    expect(useCartStore.getState().shipping?.id).toBe('rate_ground')
-
-    await user.click(screen.getByRole('button', { name: `Increase ${sampleProduct.title}` }))
-
-    // La tarifa y las opciones eran de una unidad; con dos se vuelve a cotizar.
-    expect(useCartStore.getState().shipping).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Selected' })).not.toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Selected' })).toBeInTheDocument()
-    expect(quotedItems).toEqual([{ id: sampleProduct.id, qty: 2 }])
+    expect(await screen.findByText('No sales tax')).toBeInTheDocument()
+    expect(taxedShipping).toBe(0)
+    expect(screen.getByText('Free')).toBeInTheDocument()
   })
 
   it('prefills the signed-in customer and locks the account email', async () => {

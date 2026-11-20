@@ -59,14 +59,3 @@ export type VinVehicle = {
 // marca, modelo y motor (ese trae el id de la aplicación y `vin` vacío).
 export type FitVehicle = VinVehicle & { applicationId?: string }
 
-export type ShippingRate = {
-  id?: string
-  // Shipment de EasyPost que cotizó la tarifa; el checkout lo necesita para
-  // que el backend verifique el monto.
-  shipmentId?: string
-  carrier?: string
-  service?: string
-  rate: number
-  deliveryDays?: number | null
-  guaranteed?: boolean
-}

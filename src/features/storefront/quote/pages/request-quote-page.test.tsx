@@ -23,7 +23,7 @@ describe('RequestQuotePage', () => {
   })
 
   afterEach(() => {
-    useCartStore.setState({ items: [], shipping: null })
+    useCartStore.setState({ items: [] })
   })
 
   it('sends a guest request with the cart items and shows the quote number', async () => {

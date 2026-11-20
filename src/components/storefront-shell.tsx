@@ -131,7 +131,7 @@ export function StorefrontShell() {
           </div>
           <div>
             <p className={footerHeading}>Shipping</p>
-            <p className="mt-3 text-sm leading-relaxed">Calculated at checkout, before you pay.</p>
+            <p className="mt-3 text-sm leading-relaxed">Free ground shipping on every order.</p>
           </div>
           <div>
             <p className={footerHeading}>Returns</p>

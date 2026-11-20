@@ -1,21 +1,6 @@
-import type { ShippingRate, VinVehicle } from '@/features/storefront/catalog/types'
+import type { VinVehicle } from '@/features/storefront/catalog/types'
 
-export type { ShippingRate, VinVehicle }
-
-// Lo único que el checkout manda del envío: el backend busca el monto que
-// cotizó para ese shipment y esa tarifa.
-export type ShippingSelection = {
-  shipmentId: string
-  rateId: string
-}
-
-export type ShippingRatesResponse = {
-  configured: boolean
-  message?: string
-  ground?: ShippingRate | null
-  secondDay?: ShippingRate | null
-  overnight?: ShippingRate | null
-}
+export type { VinVehicle }
 
 export type TaxEstimate = {
   tax: number

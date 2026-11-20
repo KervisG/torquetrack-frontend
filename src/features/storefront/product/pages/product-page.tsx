@@ -235,7 +235,7 @@ function BuyBox({
         <Link to="/quote">Request a quote</Link>
       </StorefrontButton>
       <p className="mt-3 text-xs leading-5 text-neutral-500">
-        Shipping is calculated at checkout, before you pay.
+        Free ground shipping on every order.
       </p>
     </aside>
   )

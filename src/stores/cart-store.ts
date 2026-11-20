@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import { apiRequest } from '@/lib/api-client'
-import type { ShippingRate } from '@/features/storefront/catalog/types'
 
 type CartLine = { id: string; qty: number }
 
@@ -30,13 +29,11 @@ type CartState = {
   // Avisos del último carrito leído. No se persisten: los repone el backend.
   notices: string[]
   priceChanges: Record<string, number>
-  shipping: ShippingRate | null
   drawerOpen: boolean
   add: (id: string) => void
   setQty: (id: string, qty: number) => void
   remove: (id: string) => void
   clear: () => void
-  setShipping: (rate: ShippingRate | null) => void
   setDrawerOpen: (open: boolean) => void
 }
 
@@ -78,11 +75,10 @@ function applyServerCart(cart: ServerCart): void {
   if (sameLines && sameNotices(current.notices, notices) && sameChanges(current.priceChanges, priceChanges)) {
     return
   }
-  // La tarifa se cotizó para los ítems anteriores. Un aviso de precio no la invalida.
   useCartStore.setState({
     notices,
     priceChanges,
-    ...(sameLines ? {} : { items, shipping: null }),
+    ...(sameLines ? {} : { items }),
   })
 }
 
@@ -101,18 +97,14 @@ export const useCartStore = create<CartState>()(
       items: [],
       notices: [],
       priceChanges: {},
-      shipping: null,
       drawerOpen: false,
-      // La tarifa elegida se cotizó para estos ítems exactos y el backend la
-      // rechaza si el carrito cambia, así que todo cambio la descarta.
       add: (id) => {
         const items = get().items.map((item) => ({ ...item }))
         const found = items.find((item) => item.id === id)
-        // En el tope no cambia nada: la tarifa cotizada sigue valiendo.
         if (found && found.qty >= MAX_CART_QUANTITY) return
         if (found) found.qty = clampQty(found.qty + 1)
         else items.push({ id, qty: 1 })
-        set({ items, shipping: null })
+        set({ items })
         schedulePush()
       },
       setQty: (id, qty) => {
@@ -121,22 +113,19 @@ export const useCartStore = create<CartState>()(
         if (!current || current.qty === next) return
         set({
           items: get().items.map((item) => (item.id === id ? { ...item, qty: next } : item)),
-          shipping: null,
         })
         schedulePush()
       },
       remove: (id) => {
         set({
           items: get().items.filter((item) => item.id !== id),
-          shipping: null,
         })
         schedulePush()
       },
       clear: () => {
-        set({ items: [], shipping: null })
+        set({ items: [] })
         schedulePush()
       },
-      setShipping: (rate) => set({ shipping: rate }),
       setDrawerOpen: (open) => set({ drawerOpen: open }),
     }),
     {
@@ -144,7 +133,6 @@ export const useCartStore = create<CartState>()(
       name: 'tt-cart',
       partialize: (state) => ({
         items: state.items,
-        shipping: state.shipping,
       }),
       // Un carrito guardado antes del tope puede traer más de 99.
       merge: (persisted, current) => {

@@ -64,7 +64,7 @@ export function PrivacyPolicyPage() {
         </p>
         <ul>
           <li>Our payment processor, to take payments and issue refunds.</li>
-          <li>Shipping rate providers and carriers, to quote and deliver your shipments.</li>
+          <li>Shipping carriers, to deliver your shipments.</li>
           <li>Our sales tax calculation provider, to calculate the tax on your order.</li>
           <li>A vehicle data service, to decode the VIN you enter.</li>
           <li>Our email delivery provider, to send account and order emails.</li>
