@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 
 // Forma de `GET /api/admin/orders/`: el `data` del pedido expandido más las
-// columnas y los pagos (sin el id de Stripe).
+// columnas y los pagos (sin el id de la pasarela).
 type OrderApiRow = {
   id: string
   number: string
@@ -58,7 +58,7 @@ export function orderRow(overrides: Partial<OrderApiRow>): OrderApiRow {
     payments: [
       {
         id: 'PAY1',
-        provider: 'stripe',
+        provider: 'authorize_net',
         status: 'PENDING',
         amount: 475.58,
         source: '',
@@ -103,13 +103,13 @@ export function ordersBackend(initial: OrderApiRow[]) {
       calls.push({ method: 'POST', path: `/api/admin/orders/${params.id}/payment-link/` })
       return HttpResponse.json({
         ok: true,
-        url: 'https://checkout.stripe.com/pay/cs_link',
+        url: 'https://shop.example.com/api/payments/PAYLINK/pay/',
         emailed: false,
       })
     }),
     http.post('/api/admin/orders/:id/take-payment/', ({ params }) => {
       calls.push({ method: 'POST', path: `/api/admin/orders/${params.id}/take-payment/` })
-      return HttpResponse.json({ ok: true, url: 'https://checkout.stripe.com/pay/cs_take' })
+      return HttpResponse.json({ ok: true, url: 'https://shop.example.com/api/payments/PAYTAKE/pay/' })
     }),
   ]
   return { handlers, calls }

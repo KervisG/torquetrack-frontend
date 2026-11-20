@@ -34,7 +34,7 @@ export function TermsPage() {
       <PolicySection title="Payment">
         <p>
           Payment in full is required at checkout before an order is processed. Payments are
-          processed securely by our payment processor, Stripe. Quotes are valid for 30 days and
+          processed securely by our payment processor, Authorize.net. Quotes are valid for 30 days and
           are also paid in full online when you accept them.
         </p>
       </PolicySection>

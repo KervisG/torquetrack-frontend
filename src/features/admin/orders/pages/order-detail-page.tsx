@@ -277,7 +277,7 @@ function RefundsTable({ refunds }: { refunds: OrderRefund[] }) {
             <tr key={refund.id} className="border-b last:border-0">
               <td className="py-2 pr-4">{formatDate(refund.createdAt)}</td>
               <td className="py-2 pr-4">
-                {refund.createdBy === 'stripe' ? 'Stripe dashboard' : refund.createdBy}
+                {refund.createdBy === 'authorize_net' ? 'Authorize.net' : refund.createdBy}
               </td>
               <td className="py-2 pr-4">{refund.reason || '—'}</td>
               <td className="py-2 pr-4">{refund.status}</td>

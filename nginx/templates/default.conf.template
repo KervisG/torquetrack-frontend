@@ -82,9 +82,9 @@ server {
         include /etc/nginx/snippets/proxy-backend.conf;
     }
 
-    # Stripe reintenta los webhooks y la firma ya los protege: un 429 solo
+    # Authorize.net reintenta los webhooks y la firma ya los protege: un 429 solo
     # demoraría la confirmación de pagos.
-    location /api/webhooks/stripe/ {
+    location /api/webhooks/authorize-net/ {
         include /etc/nginx/snippets/proxy-backend.conf;
     }
 

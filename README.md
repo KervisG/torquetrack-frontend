@@ -91,7 +91,7 @@ Content-Security-Policy; si se agrega una, tiene que permitir
 Rutas:
 
 - `/api/`, `/django-admin/` y `/static/` van a Django. `/api/` tiene un tope de
-  10 req/s por IP (ráfaga de 20, luego 429), salvo `/api/webhooks/stripe/` y
+  10 req/s por IP (ráfaga de 20, luego 429), salvo `/api/webhooks/authorize-net/` y
   `/api/health/`. Los throttles de DRF siguen siendo la segunda capa.
   `/django-admin/` comparte ese tope, y los POST a `/django-admin/login/`
   tienen uno propio de 5 por minuto por IP (ráfaga de 5), porque Django no

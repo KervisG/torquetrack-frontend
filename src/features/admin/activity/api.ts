@@ -10,7 +10,7 @@ type ActivityEntry = {
 }
 
 // `actorId`, `entityType` y `entityId` pueden venir en null: los eventos de
-// sistema (p. ej. el webhook de Stripe) no siempre tienen actor o registro.
+// sistema (p. ej. el webhook de Authorize.net) no siempre tienen actor o registro.
 type RawActivity = {
   id: number
   actorId: string | null

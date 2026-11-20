@@ -31,7 +31,7 @@ export async function getPublicQuote(token: string): Promise<PublicQuote> {
   }
 }
 
-// Sin Stripe configurado responde 502 con el motivo.
+// Sin la pasarela configurada responde 502 con el motivo.
 export function checkoutPublicQuote(
   token: string,
 ): Promise<{ ok: true; url: string; orderNumber: string }> {

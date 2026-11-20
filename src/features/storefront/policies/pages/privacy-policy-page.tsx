@@ -41,7 +41,7 @@ export function PrivacyPolicyPage() {
           </li>
         </ul>
         <p>
-          Payment card details are entered on a page hosted by our payment processor, Stripe. We do
+          Payment card details are entered on a page hosted by our payment processor, Authorize.net. We do
           not receive or store your full card number.
         </p>
       </PolicySection>

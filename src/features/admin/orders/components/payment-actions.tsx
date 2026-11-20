@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { createPaymentLink, takePayment } from '../api'
 import { adminOrderKeys } from '../query-keys'
 
-// Sin Stripe configurado las dos acciones fallan con el 502 del backend, que
+// Sin la pasarela configurada las dos acciones fallan con el 502 del backend, que
 // se muestra tal cual.
 export function PaymentActions({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient()

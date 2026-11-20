@@ -63,7 +63,7 @@ describe('OrderDetailPage', () => {
     await user.click(page.getByRole('button', { name: 'Create payment link' }))
 
     expect(await page.findByLabelText('Payment link')).toHaveValue(
-      'https://checkout.stripe.com/pay/cs_link',
+      'https://shop.example.com/api/payments/PAYLINK/pay/',
     )
     expect(
       page.getByText('The link was not emailed. Share it with the customer.'),
@@ -86,7 +86,7 @@ describe('OrderDetailPage', () => {
 
     expect(
       await page.findByRole('link', { name: 'Open secure payment page' }),
-    ).toHaveAttribute('href', 'https://checkout.stripe.com/pay/cs_take')
+    ).toHaveAttribute('href', 'https://shop.example.com/api/payments/PAYTAKE/pay/')
   })
 
   it('shows the payment provider error', async () => {
@@ -94,7 +94,7 @@ describe('OrderDetailPage', () => {
     server.use(
       authenticatedSession(),
       http.post('/api/admin/orders/:id/take-payment/', () =>
-        HttpResponse.json({ error: 'Stripe is not configured' }, { status: 502 }),
+        HttpResponse.json({ error: 'Payment provider request failed; see server logs.' }, { status: 502 }),
       ),
       ...backend.handlers,
     )
@@ -105,7 +105,7 @@ describe('OrderDetailPage', () => {
     await user.click(page.getByRole('button', { name: 'Payment' }))
     await user.click(page.getByRole('button', { name: 'Take payment' }))
 
-    expect(await page.findByText('Stripe is not configured')).toBeInTheDocument()
+    expect(await page.findByText('Payment provider request failed; see server logs.')).toBeInTheDocument()
   })
 
   it('hides payment actions for a paid order', async () => {

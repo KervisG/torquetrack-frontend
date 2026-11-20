@@ -83,7 +83,7 @@ describe('PublicQuotePage', () => {
       detailsOk(),
       http.post('/api/quote/public/:token/checkout/', ({ params }) => {
         checkoutToken = String(params.token)
-        return HttpResponse.json({ error: 'Stripe is not configured' }, { status: 502 })
+        return HttpResponse.json({ error: 'Payments are not configured' }, { status: 502 })
       }),
     )
     renderApp('/quote/tok123')
@@ -91,7 +91,7 @@ describe('PublicQuotePage', () => {
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: 'Checkout securely' }))
 
-    expect(await screen.findByText('Stripe is not configured')).toBeInTheDocument()
+    expect(await screen.findByText('Payments are not configured')).toBeInTheDocument()
     expect(checkoutToken).toBe('tok123')
   })
 

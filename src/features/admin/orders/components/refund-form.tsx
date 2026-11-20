@@ -18,7 +18,7 @@ type RefundFormProps = {
 }
 
 // El saldo viene del backend; aquí solo se muestra y se usa como tope del
-// formulario. Sin Stripe configurado el backend responde 502 y se muestra tal
+// formulario. Sin la pasarela configurada el backend responde 502 y se muestra tal
 // cual.
 export function RefundForm({ orderId, refundableAmount }: RefundFormProps) {
   const queryClient = useQueryClient()

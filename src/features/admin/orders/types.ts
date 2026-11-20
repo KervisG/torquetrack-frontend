@@ -52,7 +52,7 @@ export type OrderPayment = {
   createdAt: Date
 }
 
-// Estados en los que Stripe ya cobró: un reembolso no reabre el cobro.
+// Estados en los que la pasarela ya cobró: un reembolso no reabre el cobro.
 export const CHARGED_PAYMENT_STATUSES = ['PAID', 'PARTIALLY_REFUNDED', 'REFUNDED']
 // Solo desde estos estados el backend acepta un reembolso nuevo.
 export const REFUNDABLE_PAYMENT_STATUSES = ['PAID', 'PARTIALLY_REFUNDED']
@@ -112,7 +112,7 @@ export type AdminOrder = {
   payments: OrderPayment[]
   refunds: OrderRefund[]
   // Los dos montos los calcula el backend: el saldo descuenta también los
-  // reembolsos que Stripe todavía no confirmó.
+  // reembolsos que la pasarela todavía no confirmó.
   amountRefunded: number
   refundableAmount: number
   // Envío, separado de `status`. `trackingUrl` lo arma el backend según el
