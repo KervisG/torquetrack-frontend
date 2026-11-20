@@ -10,8 +10,9 @@ import { adminQuoteKeys } from '../query-keys'
 import type { AdminQuote } from '../types'
 import type { SaveChange } from './quote-inline-edit'
 
-// The VIN check travels as a $0 line so the customer reads it on the quote,
-// the public page and the PDF: it records who confirmed the fitment.
+// La verificación por VIN viaja como una línea de $0 para que el cliente la
+// lea en la cotización, la página pública y el PDF: deja constancia de quién
+// confirmó el fitment.
 export const VIN_CHECK_PART = 'VIN-CHECK'
 const VERIFIER = /Verified by ([A-Z]{1,4}) #(\S+)$/
 const NEW = '__new__'
@@ -20,7 +21,7 @@ export function vinCheckTitle(vin: string, verifier: string): string {
   return `All parts on this quote were verified against VIN ${vin} · Verified by ${verifier}`
 }
 
-// Verifiers already used on other quotes, so the dropdown offers them again.
+// Verificadores ya usados en otras cotizaciones, para ofrecerlos en la lista.
 function useKnownVerifiers(): string[] {
   const quotes = useQuery({ queryKey: adminQuoteKeys.list(), queryFn: listQuotes })
   const found = new Set<string>()
