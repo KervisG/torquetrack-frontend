@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { FormError } from '@/components/form-error'
@@ -72,6 +73,7 @@ function QuoteUnavailable({ error }: { error: unknown }) {
 }
 
 function QuoteView({ quote, token }: { quote: PublicQuote; token: string }) {
+  const [accepted, setAccepted] = useState(false)
   const checkout = useMutation({
     mutationFn: () => checkoutPublicQuote(token),
     onSuccess: (result) => window.location.assign(result.url),
@@ -142,12 +144,29 @@ function QuoteView({ quote, token }: { quote: PublicQuote; token: string }) {
         </CardContent>
       </Card>
 
-      {/* El backend decide si se puede pagar; el SPA no repite la regla. */}
+      {/* El backend decide si se puede pagar; el SPA no repite la regla. La
+          casilla es obligatoria: el backend guarda el texto aceptado como
+          respaldo ante reclamos de devolución. */}
       {!quote.payable ? null : (
         <div className="space-y-3">
+          <label className="flex max-w-2xl items-start gap-3 rounded-md border p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 shrink-0"
+              checked={accepted}
+              onChange={(event) => setAccepted(event.target.checked)}
+            />
+            <span>
+              {quote.acceptanceStatement}{' '}
+              <Link to="/policies/returns" className="underline underline-offset-4">
+                Read the return policy
+              </Link>
+              .
+            </span>
+          </label>
           <StorefrontButton
             type="button"
-            disabled={checkout.isPending}
+            disabled={!accepted || checkout.isPending}
             onClick={() => checkout.mutate()}
           >
             {checkout.isPending ? 'Opening secure checkout…' : 'Checkout securely'}

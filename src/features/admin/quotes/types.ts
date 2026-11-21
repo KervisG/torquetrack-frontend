@@ -78,6 +78,8 @@ export type AdminQuote = {
   orderNumber: string
   lastEmailedAt: Date | null
   lastEmailedTo: string
+  // Casilla de conformidad que el cliente marcó al pagar la cotización.
+  customerAcceptance: { acceptedAt: Date; ip: string } | null
 }
 
 export function quoteCustomerLabel(customer: QuoteCustomer): string {

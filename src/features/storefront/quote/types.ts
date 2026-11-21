@@ -23,4 +23,7 @@ export type PublicQuote = {
   // Si el checkout abriría un cobro. Lo calcula el backend con la misma regla
   // que `POST .../checkout/` (estado, vencimiento y pedido ya pagado).
   payable: boolean
+  // Texto exacto de la casilla de conformidad; el backend lo guarda tal cual
+  // cuando el cliente paga.
+  acceptanceStatement: string
 }

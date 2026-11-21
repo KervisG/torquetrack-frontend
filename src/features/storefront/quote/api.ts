@@ -31,12 +31,13 @@ export async function getPublicQuote(token: string): Promise<PublicQuote> {
   }
 }
 
-// Sin la pasarela configurada responde 502 con el motivo.
+// Sin la pasarela configurada responde 502 con el motivo. Sin `acceptTerms`
+// el backend responde 400: la conformidad del cliente es obligatoria.
 export function checkoutPublicQuote(
   token: string,
 ): Promise<{ ok: true; url: string; orderNumber: string }> {
   return apiRequest<{ ok: true; url: string; orderNumber: string }>(
     `/quote/public/${encodeURIComponent(token)}/checkout`,
-    { method: 'POST' },
+    { method: 'POST', body: JSON.stringify({ acceptTerms: true }) },
   )
 }

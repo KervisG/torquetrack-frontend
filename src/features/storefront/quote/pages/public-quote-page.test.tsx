@@ -26,6 +26,7 @@ const publicQuote = {
   ],
   totals: { subtotal: 429, core: 150, shipping: 0, tax: 0, total: 579 },
   payable: true,
+  acceptanceStatement: 'I confirm the vehicle and parts on quote Q10001.',
 }
 
 function detailsOk(body: typeof publicQuote = publicQuote) {
@@ -89,6 +90,7 @@ describe('PublicQuotePage', () => {
     renderApp('/quote/tok123')
 
     const user = userEvent.setup()
+    await user.click(await screen.findByRole('checkbox', { name: /I confirm the vehicle/ }))
     await user.click(await screen.findByRole('button', { name: 'Checkout securely' }))
 
     expect(await screen.findByText('Payments are not configured')).toBeInTheDocument()
@@ -130,6 +132,7 @@ describe('PublicQuotePage', () => {
     renderApp('/quote/tok123')
 
     const user = userEvent.setup()
+    await user.click(await screen.findByRole('checkbox', { name: /I confirm the vehicle/ }))
     await user.click(await screen.findByRole('button', { name: 'Checkout securely' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(error)

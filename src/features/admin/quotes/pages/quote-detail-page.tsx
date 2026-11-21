@@ -335,7 +335,8 @@ function NotesSection({ quote, canEdit, saveChange }: EditProps) {
   const emailed = quote.lastEmailedAt
     ? `${formatDate(quote.lastEmailedAt)} to ${quote.lastEmailedTo}`
     : ''
-  if (!quote.memo && !emailed && !canEdit) return null
+  const accepted = quote.customerAcceptance
+  if (!quote.memo && !emailed && !accepted && !canEdit) return null
   return (
     <Section title="Notes">
       <dl className="space-y-1 text-sm">
@@ -350,6 +351,14 @@ function NotesSection({ quote, canEdit, saveChange }: EditProps) {
         {emailed ? (
           <Row label="Emailed">
             <span className="text-muted-foreground">{emailed}</span>
+          </Row>
+        ) : null}
+        {accepted ? (
+          <Row label="Customer OK">
+            <span className="text-muted-foreground">
+              Confirmed vehicle and parts {accepted.acceptedAt.toLocaleString()}
+              {accepted.ip ? ` · IP ${accepted.ip}` : ''}
+            </span>
           </Row>
         ) : null}
       </dl>

@@ -34,6 +34,7 @@ type RawQuote = {
   orderNumber?: string
   lastEmailedAt?: string | null
   lastEmailedTo?: string
+  customerAcceptance?: { acceptedAt?: string; ip?: string } | null
 }
 
 function text(value: unknown): string {
@@ -134,6 +135,9 @@ function toQuote(row: RawQuote): AdminQuote {
     orderNumber: text(row.orderNumber),
     lastEmailedAt: row.lastEmailedAt ? new Date(row.lastEmailedAt) : null,
     lastEmailedTo: text(row.lastEmailedTo),
+    customerAcceptance: row.customerAcceptance?.acceptedAt
+      ? { acceptedAt: new Date(row.customerAcceptance.acceptedAt), ip: text(row.customerAcceptance.ip) }
+      : null,
   }
 }
 
